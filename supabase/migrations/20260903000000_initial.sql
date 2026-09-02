@@ -24,50 +24,6 @@ create type complaint_status as enum (
   'open', 'resolved'
 );
 
-create or replace function public.current_profile_id()
-returns uuid
-language sql
-stable
-as $$
-  select auth.uid();
-$$;
-
-create or replace function public.is_customer()
-returns boolean
-language sql
-stable
-security invoker
-as $$
-  select exists (
-    select 1 from profiles
-    where id = auth.uid() and is_customer = true
-  );
-$$;
-
-create or replace function public.is_tukang()
-returns boolean
-language sql
-stable
-security invoker
-as $$
-  select exists (
-    select 1 from profiles
-    where id = auth.uid() and is_tukang = true
-  );
-$$;
-
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security invoker
-as $$
-  select exists (
-    select 1 from profiles
-    where id = auth.uid() and is_admin = true
-  );
-$$;
-
 create table public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   email         text not null,
@@ -124,14 +80,13 @@ create table public.jobs (
   status               public.job_status not null default 'open',
   selected_provider_id uuid references public.profiles(id),
   created_at           timestamptz not null default now(),
-  updated_at           timestamptz not null default now(),
-  constraint jobs_customer_is_customer check (true) -- verified in trigger
+  updated_at           timestamptz not null default now()
 );
 
 create index jobs_customer_idx on public.jobs (customer_id);
 create index jobs_status_idx on public.jobs (status);
 create index jobs_geo_idx on public.jobs using gist (
-  geography(point(lng, lat))
+  geography(ST_MakePoint(lng, lat))
 );
 
 alter table public.jobs enable row level security;
@@ -228,7 +183,64 @@ create index reviews_provider_idx on public.reviews (provider_id);
 
 alter table public.reviews enable row level security;
 
--- RLS policies
+-- Helper functions (after tables exist)
+create or replace function public.current_profile_id()
+returns uuid
+language sql
+stable
+as $$
+  select auth.uid();
+$$;
+
+create or replace function public.is_customer()
+returns boolean
+language sql
+stable
+security invoker
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and is_customer = true
+  );
+$$;
+
+create or replace function public.is_tukang()
+returns boolean
+language sql
+stable
+security invoker
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and is_tukang = true
+  );
+$$;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security invoker
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and is_admin = true
+  );
+$$;
+
+create or replace function public.is_suspended_profile(p_user_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = p_user_id and is_suspended = true
+  );
+$$;
+
+-- RLS policies (depend on helper functions)
 -- profiles
 create policy "profiles_select_own_or_admin"
   on public.profiles for select
@@ -614,8 +626,8 @@ as $$
     and p.is_suspended = false
     and p.is_online = true
     and st_dwithin(
-      geography(point(p.lng, p.lat)),
-      geography(point(j.lng, j.lat)),
+      geography(ST_MakePoint(p.lng, p.lat)),
+      geography(ST_MakePoint(j.lng, j.lat)),
       p_radius_meters
     );
 $$;
