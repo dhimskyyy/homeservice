@@ -66,6 +66,7 @@ Postgres RLS: UPDATE harus SELECT dulu. Tanpa SELECT policy, update silent retur
 | locations | customer pemilik job & admin baca; tukang terpilih insert saat `in_progress` | |
 | complaints | customer insert; admin resolve | hanya setelah done/paid |
 | reviews | customer insert; semua baca | unik per (job, customer) |
+| app_notifications | baca & update sendiri; insert hanya service role (Edge Function) | realtime enabled |
 
 ## 4. Aksi Sensitif (di-enforce di DB)
 
