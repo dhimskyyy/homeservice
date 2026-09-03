@@ -3,22 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'auth/login_page.dart';
 import 'auth/register_page.dart';
+import 'chat/chat_page.dart';
+import 'core/theme.dart';
 import 'home/home_page.dart';
+import 'jobs/create_job_page.dart';
+import 'jobs/job_detail_page.dart';
+import 'jobs/job_list_page.dart';
+import 'profile/become_tukang_page.dart';
+import 'profile/profile_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
-  await Supabase.initialize(
-    url: dotenv.env['NEXT_PUBLIC_SUPABASE_URL']!,
-    publishableKey: dotenv.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
-  );
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ??
+      dotenv.env['NEXT_PUBLIC_SUPABASE_URL'] ??
+      '';
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ??
+      dotenv.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ??
+      '';
+
+  if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      publishableKey: supabaseAnonKey,
+    );
+  }
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
-final GoRouter _router = GoRouter(
+final GoRouter appRouter = GoRouter(
+  initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
@@ -32,6 +50,39 @@ final GoRouter _router = GoRouter(
       path: '/register',
       builder: (context, state) => const RegisterPage(),
     ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfilePage(),
+    ),
+    GoRoute(
+      path: '/become-tukang',
+      builder: (context, state) => const BecomeTukangPage(),
+    ),
+    GoRoute(
+      path: '/create-job',
+      builder: (context, state) {
+        final categoryId = state.uri.queryParameters['categoryId'];
+        return CreateJobPage(initialCategoryId: categoryId);
+      },
+    ),
+    GoRoute(
+      path: '/jobs',
+      builder: (context, state) => const JobListPage(),
+    ),
+    GoRoute(
+      path: '/jobs/:id',
+      builder: (context, state) {
+        final jobId = state.pathParameters['id'] ?? '';
+        return JobDetailPage(jobId: jobId);
+      },
+    ),
+    GoRoute(
+      path: '/chat',
+      builder: (context, state) {
+        final jobId = state.uri.queryParameters['jobId'] ?? '';
+        return ChatPage(jobId: jobId);
+      },
+    ),
   ],
 );
 
@@ -40,50 +91,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFF1E40AF);
-    final accentColor = const Color(0xFFEA580C);
-
     return MaterialApp.router(
-      routerConfig: _router,
+      routerConfig: appRouter,
       title: 'Beres',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryColor,
-          primary: primaryColor,
-          secondary: accentColor,
-        ),
-        textTheme: GoogleFonts.poppinsTextTheme().copyWith(
-          bodyMedium: GoogleFonts.openSans(),
-        ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          titleTextStyle: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accentColor,
-            foregroundColor: Colors.white,
-            textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          filled: true,
-          fillColor: Colors.grey.shade50,
-        ),
-      ),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
     );
   }
 }

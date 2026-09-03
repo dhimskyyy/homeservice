@@ -5,7 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/supabase_client.dart';
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthUiState>((ref) {
-  return AuthNotifier();
+  try {
+    final client = ref.watch(supabaseClientProvider);
+    return AuthNotifier(client: client);
+  } catch (_) {
+    return AuthNotifier(client: null);
+  }
 });
 
 class AuthUiState {
@@ -14,7 +19,12 @@ class AuthUiState {
   final String? error;
   final String? message;
 
-  const AuthUiState({this.user, this.isLoading = false, this.error, this.message});
+  const AuthUiState({
+    this.user,
+    this.isLoading = false,
+    this.error,
+    this.message,
+  });
 
   static const Object _unset = Object();
 
@@ -34,14 +44,20 @@ class AuthUiState {
 }
 
 class AuthNotifier extends StateNotifier<AuthUiState> {
-  AuthNotifier() : super(const AuthUiState()) {
-    _init();
-  }
-
+  final SupabaseClient? client;
   StreamSubscription<AuthState>? _authSub;
 
+  AuthNotifier({this.client}) : super(const AuthUiState()) {
+    if (client != null) {
+      _init();
+    }
+  }
+
   Future<void> _init() async {
-    _authSub = supabase.auth.onAuthStateChange.listen((data) {
+    final c = client;
+    if (c == null) return;
+
+    _authSub = c.auth.onAuthStateChange.listen((data) {
       final session = data.session;
       if (session != null) {
         state = state.copyWith(user: session.user, error: null);
@@ -49,58 +65,103 @@ class AuthNotifier extends StateNotifier<AuthUiState> {
         state = state.copyWith(user: null, message: null);
       }
     });
-    final session = supabase.auth.currentSession;
+
+    final session = c.auth.currentSession;
     if (session != null) {
       state = state.copyWith(user: session.user);
     }
   }
 
-  Future<void> signUp(String email, String password, String fullName, bool isCustomer) async {
+  String _mapAuthError(Object error) {
+    if (error is AuthException) {
+      final msg = error.message.toLowerCase();
+      if (msg.contains('invalid login credentials')) {
+        return 'Email atau kata sandi salah.';
+      }
+      if (msg.contains('user already registered')) {
+        return 'Email ini sudah terdaftar.';
+      }
+      if (msg.contains('password should be at least')) {
+        return 'Kata sandi minimal 6 karakter.';
+      }
+      if (msg.contains('email not confirmed')) {
+        return 'Email belum dikonfirmasi. Silakan periksa kotak masuk Anda.';
+      }
+      return error.message;
+    }
+    return error.toString();
+  }
+
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    final c = client;
+    if (c == null) {
+      return;
+    }
     state = state.copyWith(isLoading: true, error: null, message: null);
     try {
-      final response = await supabase.auth.signUp(
-        email: email,
+      final response = await c.auth.signUp(
+        email: email.trim(),
         password: password,
-        emailRedirectTo: 'com.beres.app://',
         data: {
-          'full_name': fullName,
-          'is_customer': isCustomer,
-          'is_tukang': !isCustomer,
+          'full_name': fullName.trim(),
         },
       );
       final user = response.user;
-      if (user == null) throw Exception('Registrasi gagal');
+      if (user == null) {
+        throw const AuthException('Registrasi gagal. Silakan coba lagi.');
+      }
 
-      // Profile is auto-created by the handle_new_user DB trigger.
-      // If email confirmation is required, response.session is null.
       state = state.copyWith(
-        user: response.session?.user,
+        user: response.session?.user ?? user,
         isLoading: false,
         message: response.session == null
-            ? 'Link verifikasi telah dikirim ke email Anda. Silakan cek email untuk mengaktifkan akun.'
+            ? 'Akun berhasil dibuat. Silakan cek email Anda untuk konfirmasi jika diperlukan.'
             : null,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString(), isLoading: false);
+      state = state.copyWith(error: _mapAuthError(e), isLoading: false);
+      rethrow;
     }
   }
 
-  Future<void> signIn(String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> signIn({
+    required String email,
+    required String password,
+  }) async {
+    final c = client;
+    if (c == null) {
+      return;
+    }
+    state = state.copyWith(isLoading: true, error: null, message: null);
     try {
-      final response = await supabase.auth.signInWithPassword(
-        email: email,
+      final response = await c.auth.signInWithPassword(
+        email: email.trim(),
         password: password,
       );
       state = state.copyWith(user: response.user, isLoading: false);
     } catch (e) {
-      state = state.copyWith(error: e.toString(), isLoading: false);
+      state = state.copyWith(error: _mapAuthError(e), isLoading: false);
+      rethrow;
     }
   }
 
   Future<void> signOut() async {
-    await supabase.auth.signOut();
-    state = state.copyWith(user: null);
+    final c = client;
+    if (c == null) {
+      state = const AuthUiState();
+      return;
+    }
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await c.auth.signOut();
+      state = const AuthUiState();
+    } catch (e) {
+      state = state.copyWith(error: _mapAuthError(e), isLoading: false);
+    }
   }
 
   @override
