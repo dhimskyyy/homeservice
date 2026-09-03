@@ -1,19 +1,172 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../auth/auth_provider.dart';
+import '../chat/chat_provider.dart';
 import '../core/theme.dart';
 import '../shared/models/job_models.dart';
+import '../tracking/location_provider.dart';
 import 'job_providers.dart';
 
-class JobDetailPage extends ConsumerWidget {
+class JobDetailPage extends ConsumerStatefulWidget {
   final String jobId;
 
   const JobDetailPage({super.key, required this.jobId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final jobAsync = ref.watch(jobDetailProvider(jobId));
-    final applicationsAsync = ref.watch(jobApplicationsProvider(jobId));
+  ConsumerState<JobDetailPage> createState() => _JobDetailPageState();
+}
+
+class _JobDetailPageState extends ConsumerState<JobDetailPage> {
+  bool _isProcessing = false;
+
+  Future<void> _handleLockProvider(String providerId, String providerName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Pilih & Kunci Tukang?'),
+        content: Text(
+          'Apakah Anda yakin memilih $providerName untuk mengerjakan permintaan ini? Aplikasi tukang lain otomatis dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Pilih Tukang Ini'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final repo = ref.read(jobRepositoryProvider);
+      await repo.lockProvider(jobId: widget.jobId, providerId: providerId);
+
+      ref.invalidate(jobDetailProvider(widget.jobId));
+      ref.invalidate(jobApplicationsProvider(widget.jobId));
+      ref.invalidate(customerJobsProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Berhasil memilih $providerName! Membuka ruang chat...'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.push('/chat?jobId=${widget.jobId}');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memilih tukang: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handleStartJob(String providerId) async {
+    setState(() => _isProcessing = true);
+    try {
+      final repo = ref.read(jobRepositoryProvider);
+      await repo.startJob(widget.jobId);
+
+      // Start sending location
+      ref.read(tukangLocationSenderProvider).startSending(
+            jobId: widget.jobId,
+            providerId: providerId,
+          );
+
+      ref.invalidate(jobDetailProvider(widget.jobId));
+      ref.invalidate(openJobsForTukangProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pekerjaan dimulai! Lokasi Anda dibagikan ke customer.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memulai: $e'), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handleCompleteJob() async {
+    setState(() => _isProcessing = true);
+    try {
+      final repo = ref.read(jobRepositoryProvider);
+      await repo.completeJob(widget.jobId);
+
+      // Stop location tracking
+      ref.read(tukangLocationSenderProvider).stop();
+
+      ref.invalidate(jobDetailProvider(widget.jobId));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pekerjaan selesai! Menunggu konfirmasi pembayaran.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menyelesaikan pekerjaan: $e'), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handleApprovePayment(String agreementId) async {
+    setState(() => _isProcessing = true);
+    try {
+      final repo = ref.read(jobRepositoryProvider);
+      await repo.approvePayment(agreementId: agreementId, jobId: widget.jobId);
+
+      ref.invalidate(jobDetailProvider(widget.jobId));
+      ref.invalidate(customerJobsProvider);
+      ref.invalidate(chatRoomProvider(widget.jobId));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pembayaran berhasil disetujui! Pekerjaan lunas.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal konfirmasi pembayaran: $e'), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final jobAsync = ref.watch(jobDetailProvider(widget.jobId));
+    final applicationsAsync = ref.watch(jobApplicationsProvider(widget.jobId));
+    final agreementsAsync = ref.watch(jobAgreementsProvider(widget.jobId));
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -23,8 +176,9 @@ class JobDetailPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.invalidate(jobDetailProvider(jobId));
-              ref.invalidate(jobApplicationsProvider(jobId));
+              ref.invalidate(jobDetailProvider(widget.jobId));
+              ref.invalidate(jobApplicationsProvider(widget.jobId));
+              ref.invalidate(jobAgreementsProvider(widget.jobId));
             },
           ),
         ],
@@ -37,6 +191,13 @@ class JobDetailPage extends ConsumerWidget {
             if (job == null) {
               return const Center(child: Text('Permintaan tidak ditemukan.'));
             }
+
+            final isCustomer = user?.id == job.customerId;
+            final isSelectedProvider = user?.id == job.selectedProviderId;
+
+            // Cari nota aktif yang tidak voided
+            final agreements = agreementsAsync.value ?? [];
+            final activeAgreement = agreements.where((a) => !a.voided).firstOrNull;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
@@ -102,20 +263,73 @@ class JobDetailPage extends ConsumerWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                  // Tombol Chat Utama (jika job sudah memiliki interaksi atau chat)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.chat_outlined),
-                    label: const Text('Buka Ruang Obrolan / Negosiasi'),
-                    onPressed: () {
-                      context.push('/chat?jobId=$jobId');
-                    },
-                  ),
+                  // Action Buttons berdasarkan Role & Status (Fase 4 Workflow)
+                  if (job.status == JobStatus.inProgress) ...[
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text('Lacak Posisi Tukang di Peta Live'),
+                      onPressed: () => context.push('/tracking?jobId=${job.id}'),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Tombol aksi tukang (start -> complete)
+                  if (isSelectedProvider) ...[
+                    if (job.status == JobStatus.locked)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                        ),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Mulai Bekerja (Aktifkan GPS)'),
+                        onPressed: _isProcessing ? null : () => _handleStartJob(user!.id),
+                      ),
+                    if (job.status == JobStatus.inProgress)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                        ),
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Tandai Pekerjaan Selesai'),
+                        onPressed: _isProcessing ? null : _handleCompleteJob,
+                      ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Kartu Pembayaran P2P (saat done atau paid)
+                  if (activeAgreement != null &&
+                      (job.status == JobStatus.done || job.status == JobStatus.paid)) ...[
+                    _buildPaymentCard(
+                      activeAgreement: activeAgreement,
+                      job: job,
+                      isCustomer: isCustomer,
+                      isSelectedProvider: isSelectedProvider,
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Tombol Chat Utama HANYA jika tukang sudah terpilih (status bukan open)
+                  if (job.status != JobStatus.open &&
+                      (isCustomer || isSelectedProvider)) ...[
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.chat_outlined),
+                      label: const Text('Buka Ruang Obrolan & Negosiasi'),
+                      onPressed: () {
+                        context.push('/chat?jobId=${job.id}');
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   const SizedBox(height: 24),
 
-                  // Daftar Tukang yang Merespon
+                  // Bagian Respon Tukang
                   Text(
                     'Tukang yang Merespon',
                     style: theme.textTheme.titleMedium,
@@ -152,7 +366,7 @@ class JobDetailPage extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Permintaan sedang dibroadcast ke mitra tukang di radius 50 km.',
+                                    'Permintaan sedang disiarkan ke mitra tukang di radius 50 km.',
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: AppColors.textMuted,
@@ -172,6 +386,10 @@ class JobDetailPage extends ConsumerWidget {
                         separatorBuilder: (context, index) => const SizedBox(height: 10),
                         itemBuilder: (ctx, i) {
                           final app = apps[i];
+                          final canLock = isCustomer &&
+                              job.status == JobStatus.open &&
+                              app.status == ApplicationStatus.responded;
+
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -230,23 +448,65 @@ class JobDetailPage extends ConsumerWidget {
                                       style: theme.textTheme.bodySmall,
                                     ),
                                   ],
-                                  const SizedBox(height: 12),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: OutlinedButton.icon(
-                                      icon: const Icon(Icons.chat, size: 16),
-                                      label: const Text('Chat & Negosiasi'),
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size(120, 36),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        context.push('/chat?jobId=$jobId');
-                                      },
+                                  if (app.paymentMethods.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children: app.paymentMethods.map((m) {
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceVariant,
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: AppColors.border),
+                                          ),
+                                          child: Text(
+                                            m.displayName,
+                                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
+                                  ],
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (canLock) ...[
+                                        ElevatedButton.icon(
+                                          key: Key('lock_provider_${app.providerId}'),
+                                          icon: const Icon(Icons.check_circle_outline, size: 16),
+                                          label: const Text('Terima Tukang Ini'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            minimumSize: const Size(130, 36),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                          onPressed: _isProcessing
+                                              ? null
+                                              : () => _handleLockProvider(
+                                                    app.providerId,
+                                                    app.providerName ?? 'Tukang',
+                                                  ),
+                                        ),
+                                      ] else if (app.status == ApplicationStatus.selected) ...[
+                                        ElevatedButton.icon(
+                                          icon: const Icon(Icons.chat, size: 16),
+                                          label: const Text('Chat Tukang'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            minimumSize: const Size(110, 36),
+                                          ),
+                                          onPressed: () {
+                                            context.push('/chat?jobId=${job.id}');
+                                          },
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -260,6 +520,115 @@ class JobDetailPage extends ConsumerWidget {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentCard({
+    required PriceAgreement activeAgreement,
+    required Job job,
+    required bool isCustomer,
+    required bool isSelectedProvider,
+    required ThemeData theme,
+  }) {
+    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    return Card(
+      color: Colors.green.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.green.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  job.status == JobStatus.paid ? Icons.check_circle : Icons.payment,
+                  color: Colors.green.shade800,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  job.status == JobStatus.paid
+                      ? 'Pembayaran Telah Lunas Disetujui'
+                      : 'Pembayaran Jasa (P2P Langsung)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.green.shade900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Nominal Sesuai Nota:', style: TextStyle(fontSize: 13)),
+                Text(
+                  currency.format(activeAgreement.amount),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Metode Pembayaran:', style: TextStyle(fontSize: 13)),
+                Text(
+                  activeAgreement.paymentMethod.displayName,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+
+            if (job.status == JobStatus.done) ...[
+              if (isCustomer) ...[
+                const Text(
+                  'Silakan lakukan pembayaran langsung ke tukang (tunai/transfer/e-wallet). Tukang akan menyetujui status lunas setelah dana diterima.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: const Text('Beri Tahu Tukang Saya Sudah Bayar'),
+                  onPressed: () {
+                    context.push('/chat?jobId=${job.id}');
+                  },
+                ),
+              ],
+              if (isSelectedProvider) ...[
+                const Text(
+                  'Periksa apakah Anda telah menerima pembayaran dari customer.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  key: const Key('approve_payment_button'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                  ),
+                  icon: const Icon(Icons.verified),
+                  label: const Text('Konfirmasi Pembayaran Diterima (Lunas)'),
+                  onPressed: _isProcessing
+                      ? null
+                      : () => _handleApprovePayment(activeAgreement.id),
+                ),
+              ],
+            ] else if (job.status == JobStatus.paid) ...[
+              const Text(
+                'Transaksi selesai sepenuhnya. Terima kasih telah menggunakan Beres!',
+                style: TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ],
         ),
       ),
     );

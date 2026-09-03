@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../agreement/price_agreement_widgets.dart';
 import '../auth/auth_provider.dart';
 import '../core/theme.dart';
@@ -119,17 +120,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             data: (job) {
               if (job == null || user == null) return const SizedBox.shrink();
               final isProvider = user.id != job.customerId;
-              if (isProvider && job.status == JobStatus.open) {
-                return TextButton.icon(
-                  icon: const Icon(Icons.receipt, color: Colors.white, size: 18),
-                  label: const Text(
-                    'Buat Nota',
-                    style: TextStyle(color: Colors.white, fontSize: 13),
-                  ),
-                  onPressed: () => _showCreateAgreementDialog(job, user.id),
-                );
-              }
-              return const SizedBox.shrink();
+
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (job.status == JobStatus.inProgress)
+                    IconButton(
+                      icon: const Icon(Icons.map, color: Colors.white),
+                      tooltip: 'Lacak Posisi Live',
+                      onPressed: () => context.push('/tracking?jobId=${job.id}'),
+                    ),
+                  if (isProvider && job.status == JobStatus.open)
+                    TextButton.icon(
+                      icon: const Icon(Icons.receipt, color: Colors.white, size: 18),
+                      label: const Text(
+                        'Buat Nota',
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      onPressed: () => _showCreateAgreementDialog(job, user.id),
+                    ),
+                ],
+              );
             },
             orElse: () => const SizedBox.shrink(),
           ),

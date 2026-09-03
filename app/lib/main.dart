@@ -13,6 +13,7 @@ import 'jobs/job_detail_page.dart';
 import 'jobs/job_list_page.dart';
 import 'profile/become_tukang_page.dart';
 import 'profile/profile_page.dart';
+import 'tracking/tracking_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,6 +82,13 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final jobId = state.uri.queryParameters['jobId'] ?? '';
         return ChatPage(jobId: jobId);
+      },
+    ),
+    GoRoute(
+      path: '/tracking',
+      builder: (context, state) {
+        final jobId = state.uri.queryParameters['jobId'] ?? '';
+        return TrackingPage(jobId: jobId);
       },
     ),
   ],

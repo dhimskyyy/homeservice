@@ -82,7 +82,7 @@ class JobRepository {
 
     final data = await c
         .from('job_applications')
-        .select('*, profiles:provider_id(full_name), tukang_profiles!provider_id(bio, rating_avg)')
+        .select('*, profiles:provider_id(full_name, tukang_profiles(bio, rating_avg, payment_methods))')
         .eq('job_id', jobId)
         .order('created_at', ascending: true);
 
@@ -120,5 +120,69 @@ class JobRepository {
         .maybeSingle();
 
     return data != null;
+  }
+
+  Future<void> lockProvider({
+    required String jobId,
+    required String providerId,
+  }) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    await c.from('jobs').update({
+      'status': 'locked',
+      'selected_provider_id': providerId,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
+  }
+
+  Future<void> startJob(String jobId) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    await c.from('jobs').update({
+      'status': 'in_progress',
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
+  }
+
+  Future<void> completeJob(String jobId) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    await c.from('jobs').update({
+      'status': 'done',
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
+  }
+
+  Future<void> approvePayment({
+    required String agreementId,
+    required String jobId,
+  }) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    // 1. Update status nota menjadi 'paid'
+    await c.from('price_agreements').update({
+      'status': 'paid',
+      'paid_at': DateTime.now().toIso8601String(),
+    }).eq('id', agreementId);
+
+    // 2. Update status job menjadi 'paid' (transisi done -> paid di-guard trigger jobs_status_guard)
+    await c.from('jobs').update({
+      'status': 'paid',
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
+  }
+
+  Future<void> cancelJob(String jobId) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    await c.from('jobs').update({
+      'status': 'cancelled',
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
   }
 }

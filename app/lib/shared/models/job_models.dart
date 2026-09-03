@@ -260,6 +260,7 @@ class JobApplication {
   final String? providerName;
   final double? providerRating;
   final String? providerBio;
+  final List<PaymentMethod> paymentMethods;
 
   const JobApplication({
     required this.id,
@@ -271,22 +272,41 @@ class JobApplication {
     this.providerName,
     this.providerRating,
     this.providerBio,
+    this.paymentMethods = const [],
   });
 
   factory JobApplication.fromJson(Map<String, dynamic> json) {
     String? name;
     double? rating;
     String? bio;
+    List<PaymentMethod> methods = [];
 
     if (json['profiles'] != null && json['profiles'] is Map) {
       final p = json['profiles'] as Map<String, dynamic>;
       name = p['full_name'] as String?;
+      if (p['tukang_profiles'] != null) {
+        final rawTp = p['tukang_profiles'];
+        final tp = rawTp is List && rawTp.isNotEmpty
+            ? rawTp.first as Map<String, dynamic>
+            : (rawTp is Map ? rawTp as Map<String, dynamic> : null);
+
+        if (tp != null) {
+          rating = (tp['rating_avg'] as num?)?.toDouble();
+          bio = tp['bio'] as String?;
+          final rawMethods = tp['payment_methods'];
+          if (rawMethods is List) {
+            methods = rawMethods
+                .map((m) => PaymentMethod.fromDbValue(m.toString()))
+                .toList();
+          }
+        }
+      }
     }
 
     if (json['tukang_profiles'] != null && json['tukang_profiles'] is Map) {
       final tp = json['tukang_profiles'] as Map<String, dynamic>;
-      rating = (tp['rating_avg'] as num?)?.toDouble();
-      bio = tp['bio'] as String?;
+      rating ??= (tp['rating_avg'] as num?)?.toDouble();
+      bio ??= tp['bio'] as String?;
     }
 
     return JobApplication(
@@ -303,6 +323,7 @@ class JobApplication {
       providerName: name,
       providerRating: rating,
       providerBio: bio,
+      paymentMethods: methods,
     );
   }
 
@@ -315,6 +336,32 @@ class JobApplication {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  JobApplication copyWith({
+    String? id,
+    String? jobId,
+    String? providerId,
+    ApplicationStatus? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? providerName,
+    double? providerRating,
+    String? providerBio,
+    List<PaymentMethod>? paymentMethods,
+  }) {
+    return JobApplication(
+      id: id ?? this.id,
+      jobId: jobId ?? this.jobId,
+      providerId: providerId ?? this.providerId,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      providerName: providerName ?? this.providerName,
+      providerRating: providerRating ?? this.providerRating,
+      providerBio: providerBio ?? this.providerBio,
+      paymentMethods: paymentMethods ?? this.paymentMethods,
+    );
   }
 }
 
@@ -467,6 +514,48 @@ class AppNotificationItem {
       'job_id': jobId,
       'body': body,
       'read': read,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+}
+
+class LocationPoint {
+  final String id;
+  final String jobId;
+  final String providerId;
+  final double lat;
+  final double lng;
+  final DateTime createdAt;
+
+  const LocationPoint({
+    required this.id,
+    required this.jobId,
+    required this.providerId,
+    required this.lat,
+    required this.lng,
+    required this.createdAt,
+  });
+
+  factory LocationPoint.fromJson(Map<String, dynamic> json) {
+    return LocationPoint(
+      id: json['id'] as String,
+      jobId: json['job_id'] as String,
+      providerId: json['provider_id'] as String,
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'job_id': jobId,
+      'provider_id': providerId,
+      'lat': lat,
+      'lng': lng,
       'created_at': createdAt.toIso8601String(),
     };
   }

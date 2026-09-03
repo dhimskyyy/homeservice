@@ -24,6 +24,12 @@ final agreementRepositoryProvider = Provider<AgreementRepository>((ref) {
   }
 });
 
+final jobAgreementsProvider = FutureProvider.autoDispose
+    .family<List<PriceAgreement>, String>((ref, jobId) async {
+  final repo = ref.watch(agreementRepositoryProvider);
+  return repo.getAgreements(jobId);
+});
+
 class ChatRoomState {
   final List<ChatMessage> messages;
   final List<PriceAgreement> agreements;

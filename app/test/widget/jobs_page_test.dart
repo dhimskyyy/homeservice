@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/chat/chat_provider.dart';
 import 'package:app/core/theme.dart';
 import 'package:app/jobs/job_detail_page.dart';
 import 'package:app/jobs/job_list_page.dart';
@@ -72,6 +73,7 @@ void main() {
         overrides: [
           jobDetailProvider('job-1').overrideWith((ref) async => sampleJob),
           jobApplicationsProvider('job-1').overrideWith((ref) async => []),
+          jobAgreementsProvider('job-1').overrideWith((ref) async => []),
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme,
@@ -84,7 +86,7 @@ void main() {
 
     expect(find.text('Detail Permintaan'), findsOneWidget);
     expect(find.text('Perbaikan Pipa Bocor'), findsOneWidget);
-    expect(find.text('Buka Ruang Obrolan / Negosiasi'), findsOneWidget);
     expect(find.text('Belum ada respon dari tukang sekitar'), findsOneWidget);
+    expect(find.text('Buka Ruang Obrolan & Negosiasi'), findsNothing);
   });
 }
