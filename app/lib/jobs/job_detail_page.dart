@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../auth/auth_provider.dart';
 import '../chat/chat_provider.dart';
 import '../core/theme.dart';
+import '../review/review_dialogs.dart';
+import '../review/review_provider.dart';
 import '../shared/models/job_models.dart';
 import '../tracking/location_provider.dart';
 import 'job_providers.dart';
@@ -167,6 +169,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     final jobAsync = ref.watch(jobDetailProvider(widget.jobId));
     final applicationsAsync = ref.watch(jobApplicationsProvider(widget.jobId));
     final agreementsAsync = ref.watch(jobAgreementsProvider(widget.jobId));
+    final reviewAsync = ref.watch(jobReviewProvider(widget.jobId));
+    final complaintAsync = ref.watch(jobComplaintProvider(widget.jobId));
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -179,6 +183,8 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
               ref.invalidate(jobDetailProvider(widget.jobId));
               ref.invalidate(jobApplicationsProvider(widget.jobId));
               ref.invalidate(jobAgreementsProvider(widget.jobId));
+              ref.invalidate(jobReviewProvider(widget.jobId));
+              ref.invalidate(jobComplaintProvider(widget.jobId));
             },
           ),
         ],
@@ -309,6 +315,20 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                       job: job,
                       isCustomer: isCustomer,
                       isSelectedProvider: isSelectedProvider,
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Bagian Rating & Komplain (Fase 5: saat status done atau paid untuk customer)
+                  if (isCustomer &&
+                      (job.status == JobStatus.done || job.status == JobStatus.paid) &&
+                      job.selectedProviderId != null) ...[
+                    _buildReviewAndComplaintSection(
+                      job: job,
+                      review: reviewAsync.value,
+                      complaint: complaintAsync.value,
+                      user: user!,
                       theme: theme,
                     ),
                     const SizedBox(height: 16),
@@ -685,6 +705,174 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewAndComplaintSection({
+    required Job job,
+    required Review? review,
+    required Complaint? complaint,
+    required dynamic user,
+    required ThemeData theme,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Kartu Ulasan / Tombol Beri Rating
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Ulasan & Rating Anda',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (review != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 20),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${review.rating} / 5',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (review != null) ...[
+                  if (review.comment != null && review.comment!.isNotEmpty)
+                    Text('"${review.comment}"', style: theme.textTheme.bodyMedium)
+                  else
+                    const Text('Anda telah memberi rating tanpa komentar tertulis.',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                ] else ...[
+                  const Text(
+                    'Pekerjaan telah selesai. Berikan penilaian bintang dan ulasan untuk hasil kerja mitra tukang.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    key: const Key('give_rating_button'),
+                    icon: const Icon(Icons.star_rate, size: 18),
+                    label: const Text('Beri Rating & Ulasan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.shade700,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 44),
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => RatingDialog(
+                          jobId: job.id,
+                          customerId: job.customerId,
+                          providerId: job.selectedProviderId!,
+                          providerName: job.selectedProviderName ?? 'Tukang',
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Komplain Section
+        if (complaint != null) ...[
+          Card(
+            color: Colors.red.shade50,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.shade200),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.report_problem, color: AppColors.error, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'Komplain Diajukan',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.error,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: complaint.status == ComplaintStatus.resolved
+                              ? Colors.green.shade100
+                              : Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          complaint.status.displayName,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: complaint.status == ComplaintStatus.resolved
+                                ? Colors.green.shade800
+                                : Colors.amber.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    complaint.reason,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const Key('open_complaint_dialog_button'),
+              icon: const Icon(Icons.report_outlined, size: 16, color: AppColors.error),
+              label: const Text(
+                'Ada masalah? Ajukan Komplain',
+                style: TextStyle(color: AppColors.error, fontSize: 12),
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => ComplaintDialog(
+                    jobId: job.id,
+                    customerId: job.customerId,
+                    providerId: job.selectedProviderId!,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

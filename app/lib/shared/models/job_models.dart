@@ -560,3 +560,135 @@ class LocationPoint {
     };
   }
 }
+
+enum ComplaintStatus {
+  open,
+  resolved;
+
+  String toDbValue() => name;
+
+  static ComplaintStatus fromDbValue(String val) {
+    switch (val) {
+      case 'resolved':
+        return ComplaintStatus.resolved;
+      case 'open':
+      default:
+        return ComplaintStatus.open;
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case ComplaintStatus.open:
+        return 'Sedang Ditinjau';
+      case ComplaintStatus.resolved:
+        return 'Terselesaikan';
+    }
+  }
+}
+
+class Review {
+  final String id;
+  final String jobId;
+  final String customerId;
+  final String providerId;
+  final int rating;
+  final String? comment;
+  final DateTime createdAt;
+  final String? customerName;
+
+  const Review({
+    required this.id,
+    required this.jobId,
+    required this.customerId,
+    required this.providerId,
+    required this.rating,
+    this.comment,
+    required this.createdAt,
+    this.customerName,
+  });
+
+  factory Review.fromJson(Map<String, dynamic> json) {
+    String? name;
+    if (json['profiles'] != null && json['profiles'] is Map) {
+      name = json['profiles']['full_name'] as String?;
+    }
+
+    return Review(
+      id: json['id'] as String,
+      jobId: json['job_id'] as String,
+      customerId: json['customer_id'] as String,
+      providerId: json['provider_id'] as String,
+      rating: json['rating'] as int? ?? 5,
+      comment: json['comment'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      customerName: name,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'job_id': jobId,
+      'customer_id': customerId,
+      'provider_id': providerId,
+      'rating': rating,
+      'comment': comment,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+}
+
+class Complaint {
+  final String id;
+  final String jobId;
+  final String customerId;
+  final String providerId;
+  final String reason;
+  final ComplaintStatus status;
+  final DateTime createdAt;
+  final DateTime? resolvedAt;
+
+  const Complaint({
+    required this.id,
+    required this.jobId,
+    required this.customerId,
+    required this.providerId,
+    required this.reason,
+    required this.status,
+    required this.createdAt,
+    this.resolvedAt,
+  });
+
+  factory Complaint.fromJson(Map<String, dynamic> json) {
+    return Complaint(
+      id: json['id'] as String,
+      jobId: json['job_id'] as String,
+      customerId: json['customer_id'] as String,
+      providerId: json['provider_id'] as String,
+      reason: json['reason'] as String? ?? '',
+      status: ComplaintStatus.fromDbValue(json['status'] as String? ?? 'open'),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      resolvedAt: json['resolved_at'] != null
+          ? DateTime.parse(json['resolved_at'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'job_id': jobId,
+      'customer_id': customerId,
+      'provider_id': providerId,
+      'reason': reason,
+      'status': status.toDbValue(),
+      'created_at': createdAt.toIso8601String(),
+      'resolved_at': resolvedAt?.toIso8601String(),
+    };
+  }
+}
