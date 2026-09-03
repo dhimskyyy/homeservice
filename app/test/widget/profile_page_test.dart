@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/core/theme.dart';
+import 'package:app/jobs/job_providers.dart';
 import 'package:app/profile/profile_page.dart';
 import 'package:app/profile/profile_provider.dart';
+import 'package:app/shared/models/job_models.dart';
 import 'package:app/shared/models/user_profile.dart';
 
 void main() {
@@ -43,6 +45,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          customerJobsProvider.overrideWith((ref) async => []),
           profileProvider.overrideWith((ref) {
             return _MockProfileNotifier(
               ProfileState(
@@ -72,6 +75,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          customerJobsProvider.overrideWith((ref) async => []),
           profileProvider.overrideWith((ref) {
             return _MockProfileNotifier(
               ProfileState(
@@ -95,6 +99,50 @@ void main() {
     expect(find.byKey(const Key('switch_role_button')), findsOneWidget);
     expect(find.text('Beralih ke Mode Tukang'), findsOneWidget);
     expect(find.text('Daftar Jadi Tukang Sekarang'), findsNothing);
+  });
+
+  testWidgets('ProfilePage renders Edit Profile button and History Permintaan',
+      (tester) async {
+    final sampleJob = Job(
+      id: 'job-100',
+      customerId: 'u1',
+      categoryId: 'cat-1',
+      title: 'Perbaikan Kipas Angin',
+      description: 'Kipas tidak mau berputar',
+      lat: -6.1754,
+      lng: 106.8272,
+      status: JobStatus.open,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      categoryName: 'Listrik',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerJobsProvider.overrideWith((ref) async => [sampleJob]),
+          profileProvider.overrideWith((ref) {
+            return _MockProfileNotifier(
+              ProfileState(
+                profile: customerOnlyProfile,
+                activeRole: UserRole.customer,
+              ),
+            );
+          }),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const ProfilePage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Profil'), findsOneWidget);
+    expect(find.text('History Permintaan Saya'), findsOneWidget);
+    expect(find.text('Perbaikan Kipas Angin'), findsOneWidget);
+    expect(find.byType(Dismissible), findsOneWidget);
   });
 }
 

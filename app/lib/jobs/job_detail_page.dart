@@ -163,6 +163,62 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     }
   }
 
+  Future<void> _handleCancelJob() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.cancel_outlined, color: AppColors.error, size: 22),
+            SizedBox(width: 8),
+            Text('Batalkan Permintaan?'),
+          ],
+        ),
+        content: const Text(
+          'Apakah Anda yakin ingin membatalkan permintaan ini? Tiket akan dihentikan dan dihapus dari daftar permintaan tukang sekitar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Kembali'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final repo = ref.read(jobRepositoryProvider);
+      await repo.cancelJob(widget.jobId);
+
+      ref.invalidate(jobDetailProvider(widget.jobId));
+      ref.invalidate(customerJobsProvider);
+      ref.invalidate(openJobsForTukangProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permintaan berhasil dibatalkan.'),
+          backgroundColor: AppColors.secondary,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membatalkan: $e'), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -348,6 +404,23 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                   ],
 
                   const SizedBox(height: 24),
+
+                  // Tombol Batalkan Permintaan untuk Customer (bisa dari status open atau locked)
+                  if (isCustomer &&
+                      (job.status == JobStatus.open || job.status == JobStatus.locked)) ...[
+                    OutlinedButton.icon(
+                      key: const Key('cancel_job_button'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        minimumSize: const Size(double.infinity, 42),
+                      ),
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
+                      label: const Text('Batalkan Permintaan Ini'),
+                      onPressed: _isProcessing ? null : _handleCancelJob,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Bagian Respon Tukang
                   Text(

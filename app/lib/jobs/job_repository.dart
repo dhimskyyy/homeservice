@@ -185,4 +185,11 @@ class JobRepository {
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
+
+  Future<void> deleteJob(String jobId) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    await c.from('jobs').delete().eq('id', jobId);
+  }
 }

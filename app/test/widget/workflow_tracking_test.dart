@@ -75,6 +75,7 @@ void main() {
     expect(find.text('Perbaikan AC Rusak'), findsOneWidget);
     expect(find.text('Tukang Agus'), findsOneWidget);
     expect(find.byKey(const Key('lock_provider_tukang-1')), findsOneWidget);
+    expect(find.byKey(const Key('cancel_job_button')), findsOneWidget);
   });
 
   testWidgets(
