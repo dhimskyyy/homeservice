@@ -24,17 +24,39 @@ class JobListPage extends ConsumerWidget {
           },
           child: jobsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Gagal memuat daftar permintaan: $e'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => ref.invalidate(customerJobsProvider),
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
+            error: (e, _) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.error,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Gagal memuat daftar permintaan',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$e',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () => ref.refresh(customerJobsProvider),
+                      label: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
               ),
             ),
             data: (jobs) {

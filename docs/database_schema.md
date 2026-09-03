@@ -382,16 +382,15 @@ create policy "service_categories_admin_write"
 ### 6.4 jobs
 
 ```sql
--- customer baca job miliknya; tukang baca job yang dia respond; admin semua
+-- customer baca job miliknya; tukang baca job terbuka / yang dia respond / terpilih; admin semua
 create policy "jobs_select_involved"
   on public.jobs for select
   to authenticated
   using (
     customer_id = auth.uid()
-    or exists (
-      select 1 from public.job_applications a
-      where a.job_id = jobs.id and a.provider_id = auth.uid()
-    )
+    or status = 'open'
+    or selected_provider_id = auth.uid()
+    or internal.has_provider_applied(id, auth.uid())
     or public.is_admin()
   );
 
@@ -420,10 +419,7 @@ create policy "job_applications_select"
   to authenticated
   using (
     provider_id = auth.uid()
-    or exists (
-      select 1 from public.jobs j
-      where j.id = job_id and j.customer_id = auth.uid()
-    )
+    or internal.is_job_customer(job_id, auth.uid())
     or public.is_admin()
   );
 

@@ -59,8 +59,8 @@ Postgres RLS: UPDATE harus SELECT dulu. Tanpa SELECT policy, update silent retur
 | profiles | baca sendiri + admin | user tidak boleh ubah role sendiri |
 | tukang_profiles | baca sendiri + admin; tulis sendiri | insert di-guard `is_tukang` |
 | service_categories | baca semua login; tulis admin | katalog publik |
-| jobs | customer baca miliknya; tukang baca yang direspond; admin semua | insert hanya customer; update via trigger |
-| job_applications | tukang tulis miliknya; customer baca job-nya | respond hanya saat `open` |
+| jobs | customer baca miliknya; tukang baca job open / yang direspond / terpilih; admin semua | insert hanya customer; update via trigger |
+| job_applications | tukang tulis & baca miliknya; customer baca job-nya (via internal helper) | respond hanya saat `open` |
 | price_agreements | customer & tukang terkait | insert hanya tukang yang merespon saat job `open`; `voided` saat tukang lain dipilih; paid hanya saat `done` |
 | messages | customer & tukang terlibat di job | |
 | locations | customer pemilik job & admin baca; tukang terpilih insert saat `in_progress` | |
