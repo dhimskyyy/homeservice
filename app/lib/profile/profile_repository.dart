@@ -74,6 +74,7 @@ class ProfileRepository {
     required String bio,
     required List<String> serviceTypeIds,
     required List<PaymentMethod> paymentMethods,
+    Map<String, dynamic> paymentDetails = const {},
   }) async {
     final c = client;
     if (c == null) return;
@@ -83,7 +84,22 @@ class ProfileRepository {
         'p_bio': bio,
         'p_service_type_ids': serviceTypeIds,
         'p_payment_methods': paymentMethods.map((m) => m.toDbValue()).toList(),
+        'p_payment_details': paymentDetails,
       },
     );
+  }
+
+  Future<void> updateTukangPayments({
+    required String profileId,
+    required List<PaymentMethod> paymentMethods,
+    required Map<String, dynamic> paymentDetails,
+  }) async {
+    final c = client;
+    if (c == null) return;
+    await c.from('tukang_profiles').update({
+      'payment_methods': paymentMethods.map((m) => m.toDbValue()).toList(),
+      'payment_details': paymentDetails,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('profile_id', profileId);
   }
 }

@@ -55,16 +55,16 @@ void main() {
     testWidgets('renders all registration fields', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest(const RegisterPage()));
 
-      expect(find.text('Daftar Akun Beres'), findsOneWidget);
-      expect(find.text('Buat Akun Baru'), findsOneWidget);
+      expect(find.text('Daftar Akun Customer'), findsOneWidget);
+      expect(find.text('Buat Akun Customer'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(4)); // Nama, Email, Password, Konfirmasi
-      expect(find.widgetWithText(ElevatedButton, 'Daftar'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Daftar Customer'), findsOneWidget);
     });
 
     testWidgets('validates required fields on submit', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest(const RegisterPage()));
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Daftar'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Daftar Customer'));
       await tester.pumpAndSettle();
 
       expect(find.text('Nama lengkap wajib diisi'), findsOneWidget);
@@ -81,7 +81,7 @@ void main() {
       await tester.enterText(fields.at(2), 'password123');
       await tester.enterText(fields.at(3), 'password456'); // beda
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Daftar'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Daftar Customer'));
       await tester.pumpAndSettle();
 
       expect(find.text('Konfirmasi kata sandi tidak cocok'), findsOneWidget);

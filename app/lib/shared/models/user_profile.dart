@@ -161,6 +161,7 @@ class TukangProfile {
   final String bio;
   final List<String> serviceTypeIds;
   final List<PaymentMethod> paymentMethods;
+  final Map<String, dynamic> paymentDetails;
   final double ratingAvg;
   final int jobCount;
   final DateTime createdAt;
@@ -171,6 +172,7 @@ class TukangProfile {
     required this.bio,
     required this.serviceTypeIds,
     required this.paymentMethods,
+    this.paymentDetails = const {},
     required this.ratingAvg,
     required this.jobCount,
     required this.createdAt,
@@ -190,11 +192,16 @@ class TukangProfile {
             .toList()
         : <PaymentMethod>[];
 
+    final details = json['payment_details'] is Map<String, dynamic>
+        ? json['payment_details'] as Map<String, dynamic>
+        : <String, dynamic>{};
+
     return TukangProfile(
       profileId: json['profile_id'] as String,
       bio: json['bio'] as String? ?? '',
       serviceTypeIds: serviceIds,
       paymentMethods: methods,
+      paymentDetails: details,
       ratingAvg: (json['rating_avg'] as num?)?.toDouble() ?? 0.0,
       jobCount: json['job_count'] as int? ?? 0,
       createdAt: json['created_at'] != null
@@ -212,6 +219,7 @@ class TukangProfile {
       'bio': bio,
       'service_type_ids': serviceTypeIds,
       'payment_methods': paymentMethods.map((m) => m.toDbValue()).toList(),
+      'payment_details': paymentDetails,
       'rating_avg': ratingAvg,
       'job_count': jobCount,
       'created_at': createdAt.toIso8601String(),

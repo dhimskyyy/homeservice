@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import 'auth_provider.dart';
+import 'role_selection_dialog.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -172,7 +173,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         children: [
                           const Text('Belum punya akun?'),
                           TextButton(
-                            onPressed: () => context.go('/register'),
+                            onPressed: () => RoleSelectionDialog.show(context),
                             child: const Text('Daftar Sekarang'),
                           ),
                         ],

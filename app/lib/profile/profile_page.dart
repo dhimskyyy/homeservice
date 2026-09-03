@@ -6,6 +6,7 @@ import '../core/theme.dart';
 import '../jobs/job_providers.dart';
 import '../shared/models/job_models.dart';
 import '../shared/models/user_profile.dart';
+import 'edit_payment_dialog.dart';
 import 'edit_profile_dialog.dart';
 import 'profile_provider.dart';
 
@@ -405,11 +406,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             style: theme.textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            'Metode Pembayaran Diterima:',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Metode Pembayaran Diterima:',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  foregroundColor: AppColors.secondary,
+                                ),
+                                icon: const Icon(Icons.edit, size: 14),
+                                label: const Text('Kelola Pembayaran', style: TextStyle(fontSize: 12)),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => EditPaymentDialog(tukangProfile: tukang),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Wrap(

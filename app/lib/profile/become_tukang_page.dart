@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import '../shared/models/user_profile.dart';
 import 'profile_provider.dart';
+import 'tukang_payment_selector.dart';
 
 class BecomeTukangPage extends ConsumerStatefulWidget {
   const BecomeTukangPage({super.key});
@@ -16,7 +17,8 @@ class _BecomeTukangPageState extends ConsumerState<BecomeTukangPage> {
   final _formKey = GlobalKey<FormState>();
   final _bioController = TextEditingController();
   final Set<String> _selectedServiceIds = {};
-  final Set<PaymentMethod> _selectedPaymentMethods = {PaymentMethod.cash};
+  List<PaymentMethod> _selectedPaymentMethods = [PaymentMethod.cash];
+  Map<String, dynamic> _paymentDetails = {};
   bool _isSubmitting = false;
 
   @override
@@ -54,7 +56,8 @@ class _BecomeTukangPageState extends ConsumerState<BecomeTukangPage> {
       await ref.read(profileProvider.notifier).becomeTukang(
             bio: _bioController.text.trim(),
             serviceTypeIds: _selectedServiceIds.toList(),
-            paymentMethods: _selectedPaymentMethods.toList(),
+            paymentMethods: _selectedPaymentMethods,
+            paymentDetails: _paymentDetails,
           );
 
       if (!mounted) return;
@@ -192,36 +195,21 @@ class _BecomeTukangPageState extends ConsumerState<BecomeTukangPage> {
                 const SizedBox(height: 24),
                 Text(
                   '3. Metode Pembayaran yang Diterima',
-                  style: theme.textTheme.titleSmall,
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
-                Column(
-                  children: PaymentMethod.values.map((method) {
-                    final isChecked = _selectedPaymentMethods.contains(method);
-                    return CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(method.displayName),
-                      value: isChecked,
-                      activeColor: AppColors.primary,
-                      onChanged: (val) {
-                        setState(() {
-                          if (val == true) {
-                            _selectedPaymentMethods.add(method);
-                          } else {
-                            if (_selectedPaymentMethods.length > 1) {
-                              _selectedPaymentMethods.remove(method);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Minimal pilih 1 metode pembayaran.'),
-                                ),
-                              );
-                            }
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+                const SizedBox(height: 4),
+                const Text(
+                  'Pilih metode pembayaran (Tunai, E-Wallet, dan Transfer Bank) serta nomor penerimaan dana Anda.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                TukangPaymentSelector(
+                  initialMethods: _selectedPaymentMethods,
+                  initialDetails: _paymentDetails,
+                  onChanged: (methods, details) {
+                    _selectedPaymentMethods = methods;
+                    _paymentDetails = details;
+                  },
                 ),
                 const SizedBox(height: 28),
                 ElevatedButton(

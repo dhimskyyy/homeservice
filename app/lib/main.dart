@@ -49,7 +49,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterPage(),
+      builder: (context, state) {
+        final role = state.uri.queryParameters['role'];
+        return RegisterPage(initialRole: role);
+      },
     ),
     GoRoute(
       path: '/profile',

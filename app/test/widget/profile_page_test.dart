@@ -165,6 +165,13 @@ class _MockProfileNotifier extends StateNotifier<ProfileState>
     required String bio,
     required List<String> serviceTypeIds,
     required List<PaymentMethod> paymentMethods,
+    Map<String, dynamic> paymentDetails = const {},
+  }) async {}
+
+  @override
+  Future<void> updateTukangPayments({
+    required List<PaymentMethod> paymentMethods,
+    required Map<String, dynamic> paymentDetails,
   }) async {}
 
   @override

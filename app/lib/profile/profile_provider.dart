@@ -116,6 +116,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     required String bio,
     required List<String> serviceTypeIds,
     required List<PaymentMethod> paymentMethods,
+    Map<String, dynamic> paymentDetails = const {},
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -123,12 +124,34 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         bio: bio,
         serviceTypeIds: serviceTypeIds,
         paymentMethods: paymentMethods,
+        paymentDetails: paymentDetails,
       );
       final userId = state.profile?.id;
       if (userId != null) {
         await loadProfile(userId);
         state = state.copyWith(activeRole: UserRole.tukang);
       }
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> updateTukangPayments({
+    required List<PaymentMethod> paymentMethods,
+    required Map<String, dynamic> paymentDetails,
+  }) async {
+    final userId = state.profile?.id;
+    if (userId == null) return;
+
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _repo.updateTukangPayments(
+        profileId: userId,
+        paymentMethods: paymentMethods,
+        paymentDetails: paymentDetails,
+      );
+      await loadProfile(userId);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;

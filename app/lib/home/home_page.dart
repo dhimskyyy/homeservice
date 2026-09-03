@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_provider.dart';
+import '../auth/role_selection_dialog.dart';
 import '../core/theme.dart';
 import '../jobs/job_providers.dart';
 import '../jobs/tukang_job_feed.dart';
@@ -133,7 +134,7 @@ class HomePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => context.go('/register'),
+                  onPressed: () => RoleSelectionDialog.show(context),
                   child: const Text('Daftar Akun Baru'),
                 ),
               ],
