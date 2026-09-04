@@ -30,7 +30,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Nota Kesepakatan Harga'), findsOneWidget);
+    expect(find.text('Nota Kesepakatan'), findsOneWidget);
     expect(find.text('Rp 150.000'), findsOneWidget);
     expect(find.text('Tunai (Cash)'), findsOneWidget);
     expect(find.text('Menunggu Pembayaran'), findsOneWidget);

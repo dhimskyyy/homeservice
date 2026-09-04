@@ -194,11 +194,14 @@ class _MockAuthNotifier extends StateNotifier<AuthUiState> implements AuthNotifi
   Future<void> signOut() async {}
 
   @override
-  Future<void> signUp({
+  Future<bool> signUp({
     required String email,
     required String password,
     required String fullName,
-  }) async {}
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    return true;
+  }
 }
 
 class _MockAgreementRepository implements AgreementRepository {

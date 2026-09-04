@@ -92,36 +92,44 @@ class AuthNotifier extends StateNotifier<AuthUiState> {
     return error.toString();
   }
 
-  Future<void> signUp({
+  Future<bool> signUp({
     required String email,
     required String password,
     required String fullName,
+    Map<String, dynamic> metadata = const {},
   }) async {
     final c = client;
     if (c == null) {
-      return;
+      return true;
     }
     state = state.copyWith(isLoading: true, error: null, message: null);
     try {
+      final dataPayload = <String, dynamic>{
+        'full_name': fullName.trim(),
+        ...metadata,
+      };
+
       final response = await c.auth.signUp(
         email: email.trim(),
         password: password,
-        data: {
-          'full_name': fullName.trim(),
-        },
+        data: dataPayload,
       );
       final user = response.user;
       if (user == null) {
         throw const AuthException('Registrasi gagal. Silakan coba lagi.');
       }
 
+      final hasActiveSession = response.session != null;
+
       state = state.copyWith(
-        user: response.session?.user ?? user,
+        user: response.session?.user,
         isLoading: false,
-        message: response.session == null
+        message: !hasActiveSession
             ? 'Akun berhasil dibuat. Silakan cek email Anda untuk konfirmasi jika diperlukan.'
             : null,
       );
+
+      return hasActiveSession;
     } catch (e) {
       state = state.copyWith(error: _mapAuthError(e), isLoading: false);
       rethrow;

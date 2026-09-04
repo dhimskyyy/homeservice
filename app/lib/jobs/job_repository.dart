@@ -62,13 +62,45 @@ class JobRepository {
     return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
   }
 
+  Future<List<Job>> getTukangJobs(String providerId) async {
+    final c = client;
+    if (c == null) return [];
+
+    // 1. Ambil job ID yang pernah di-apply tukang ini
+    final apps = await c
+        .from('job_applications')
+        .select('job_id')
+        .eq('provider_id', providerId);
+
+    final appliedJobIds = (apps as List)
+        .map((a) => a['job_id'].toString())
+        .toList();
+
+    if (appliedJobIds.isEmpty) {
+      final data = await c
+          .from('jobs')
+          .select('*, service_categories(name)')
+          .eq('selected_provider_id', providerId)
+          .order('created_at', ascending: false);
+      return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
+    }
+
+    final data = await c
+        .from('jobs')
+        .select('*, service_categories(name)')
+        .or('selected_provider_id.eq.$providerId,id.in.(${appliedJobIds.join(",")})')
+        .order('created_at', ascending: false);
+
+    return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
   Future<Job?> getJobDetail(String jobId) async {
     final c = client;
     if (c == null) return null;
 
     final data = await c
         .from('jobs')
-        .select('*, service_categories(name)')
+        .select('*, service_categories(name), customer_profile:customer_id(full_name), provider_profile:selected_provider_id(full_name, tukang_profiles(rating_avg))')
         .eq('id', jobId)
         .maybeSingle();
 

@@ -116,7 +116,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ? 'Customer (Pencari Jasa)'
         : 'Tukang (Penyedia Jasa)';
 
-    final jobs = customerJobsAsync.value ?? [];
+    final isTukangRole = profileState.activeRole == UserRole.tukang;
+    final tukangJobsAsync = ref.watch(tukangJobsProvider);
+    final jobs = isTukangRole
+        ? (tukangJobsAsync.value ?? [])
+        : (customerJobsAsync.value ?? []);
+
     final activeJobs = jobs
         .where((j) =>
             j.status == JobStatus.open ||
@@ -155,6 +160,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(customerJobsProvider);
+            ref.invalidate(tukangJobsProvider);
             if (profile.id.isNotEmpty) {
               await ref.read(profileProvider.notifier).loadProfile(profile.id);
             }
@@ -407,21 +413,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                           const SizedBox(height: 12),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Metode Pembayaran Diterima:',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                              Expanded(
+                                child: Text(
+                                  'Metode Pembayaran Diterima:',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                               TextButton.icon(
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
                                   foregroundColor: AppColors.secondary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 ),
                                 icon: const Icon(Icons.edit, size: 14),
-                                label: const Text('Kelola Pembayaran', style: TextStyle(fontSize: 12)),
+                                label: const Text('Kelola', style: TextStyle(fontSize: 12)),
                                 onPressed: () {
                                   showDialog(
                                     context: context,

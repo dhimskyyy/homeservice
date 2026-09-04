@@ -5,16 +5,24 @@ import '../auth/auth_provider.dart';
 import '../auth/role_selection_dialog.dart';
 import '../core/theme.dart';
 import '../jobs/job_providers.dart';
+import '../jobs/tukang_active_jobs_section.dart';
 import '../jobs/tukang_job_feed.dart';
 import '../profile/profile_provider.dart';
 import '../shared/models/job_models.dart';
 import '../shared/models/user_profile.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  int _tukangTab = 0; // 0: Pekerjaan Saya, 1: Permintaan Terbuka Sekitar
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
@@ -707,23 +715,75 @@ class HomePage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Permintaan Jasa Terbuka',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 20),
-                onPressed: () {
-                  ref.invalidate(openJobsForTukangProvider);
-                },
-              ),
-            ],
+
+          // Pilihan Tab Pekerjaan Tukang (Scrollable agar tidak overflow)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text('Pekerjaan Saya'),
+                  selected: _tukangTab == 0,
+                  selectedColor: AppColors.secondary.withValues(alpha: 0.18),
+                  checkmarkColor: AppColors.secondary,
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _tukangTab == 0 ? AppColors.secondary : AppColors.textPrimary,
+                  ),
+                  onSelected: (_) => setState(() => _tukangTab = 0),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Job Sekitar'),
+                  selected: _tukangTab == 1,
+                  selectedColor: AppColors.primary.withValues(alpha: 0.18),
+                  checkmarkColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _tukangTab == 1 ? AppColors.primary : AppColors.textPrimary,
+                  ),
+                  onSelected: (_) => setState(() => _tukangTab = 1),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          const TukangJobFeed(),
+          const SizedBox(height: 12),
+
+          if (_tukangTab == 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Job yang harus diselesaikan',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  tooltip: 'Muat Ulang',
+                  onPressed: () => ref.invalidate(tukangJobsProvider),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const TukangActiveJobsSection(),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Pekerjaan Terbuka (Radius 50 km)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  tooltip: 'Muat Ulang',
+                  onPressed: () => ref.invalidate(openJobsForTukangProvider),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const TukangJobFeed(),
+          ],
         ],
       ),
     );

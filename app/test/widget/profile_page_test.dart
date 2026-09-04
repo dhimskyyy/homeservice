@@ -46,6 +46,7 @@ void main() {
       ProviderScope(
         overrides: [
           customerJobsProvider.overrideWith((ref) async => []),
+          tukangJobsProvider.overrideWith((ref) async => []),
           profileProvider.overrideWith((ref) {
             return _MockProfileNotifier(
               ProfileState(
@@ -76,6 +77,7 @@ void main() {
       ProviderScope(
         overrides: [
           customerJobsProvider.overrideWith((ref) async => []),
+          tukangJobsProvider.overrideWith((ref) async => []),
           profileProvider.overrideWith((ref) {
             return _MockProfileNotifier(
               ProfileState(
@@ -121,6 +123,7 @@ void main() {
       ProviderScope(
         overrides: [
           customerJobsProvider.overrideWith((ref) async => [sampleJob]),
+          tukangJobsProvider.overrideWith((ref) async => []),
           profileProvider.overrideWith((ref) {
             return _MockProfileNotifier(
               ProfileState(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
+import '../agreement/price_agreement_widgets.dart';
 import '../auth/auth_provider.dart';
 import '../chat/chat_provider.dart';
 import '../core/theme.dart';
@@ -9,6 +12,7 @@ import '../review/review_dialogs.dart';
 import '../review/review_provider.dart';
 import '../shared/models/job_models.dart';
 import '../tracking/location_provider.dart';
+import 'job_progress_tracker.dart';
 import 'job_providers.dart';
 
 class JobDetailPage extends ConsumerStatefulWidget {
@@ -219,6 +223,21 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
     }
   }
 
+  void _showCreateAgreementDialog(Job job, String providerId) {
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => CreateAgreementDialog(
+        jobId: job.id,
+        customerId: job.customerId,
+        providerId: providerId,
+      ),
+    ).then((val) {
+      if (val == true) {
+        ref.invalidate(jobAgreementsProvider(widget.jobId));
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -325,6 +344,11 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                     ),
                   ),
 
+                  // Kartu Stepper Tracking Progress Alur Kerja
+                  JobProgressTracker(
+                    status: job.status,
+                    isTukangView: isSelectedProvider,
+                  ),
                   const SizedBox(height: 16),
 
                   // Action Buttons berdasarkan Role & Status (Fase 4 Workflow)
@@ -340,8 +364,24 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                     const SizedBox(height: 12),
                   ],
 
-                  // Tombol aksi tukang (start -> complete)
+                  // Tombol aksi tukang (start -> complete -> create agreement)
                   if (isSelectedProvider) ...[
+                    // Tombol Buat Nota jika belum ada nota aktif
+                    if (activeAgreement == null &&
+                        (job.status == JobStatus.open || job.status == JobStatus.locked)) ...[
+                      ElevatedButton.icon(
+                        key: const Key('create_nota_button'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.receipt_long),
+                        label: const Text('Buat Nota Kesepakatan Harga'),
+                        onPressed: () => _showCreateAgreementDialog(job, user!.id),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     if (job.status == JobStatus.locked)
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
@@ -395,7 +435,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                       (isCustomer || isSelectedProvider)) ...[
                     OutlinedButton.icon(
                       icon: const Icon(Icons.chat_outlined),
-                      label: const Text('Buka Ruang Obrolan & Negosiasi'),
+                      label: const Text('Buka Obrolan'),
                       onPressed: () {
                         context.push('/chat?jobId=${job.id}');
                       },
@@ -422,151 +462,151 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Bagian Respon Tukang
-                  Text(
-                    'Tukang yang Merespon',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  applicationsAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
+                  // Peta Titik Lokasi Customer (Sesuai Permintaan)
+                  _buildCustomerLocationMap(job, theme),
+                  const SizedBox(height: 20),
+
+                  // Bagian Respon Tukang HANYA untuk Customer saat status masih open (untuk memilih tukang)
+                  if (isCustomer && job.status == JobStatus.open) ...[
+                    Text(
+                      'Tukang yang Mengajukan Diri',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    error: (e, _) => Text('Gagal memuat respon: $e'),
-                    data: (apps) {
-                      if (apps.isEmpty) {
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  const Icon(
-                                    Icons.hourglass_empty,
-                                    color: AppColors.textMuted,
-                                    size: 36,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Belum ada respon dari tukang sekitar',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Permintaan sedang disiarkan ke mitra tukang di radius 50 km.',
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: apps.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
-                        itemBuilder: (ctx, i) {
-                          final app = apps[i];
-                          final canLock = isCustomer &&
-                              job.status == JobStatus.open &&
-                              app.status == ApplicationStatus.responded;
-
+                    const SizedBox(height: 8),
+                    applicationsAsync.when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (e, _) => Text('Gagal memuat respon: $e'),
+                      data: (apps) {
+                        if (apps.isEmpty) {
                           return Card(
                             child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      CircleAvatar(
-                                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                        child: const Icon(
-                                          Icons.person,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              app.providerName ?? 'Mitra Tukang',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                            if (app.providerRating != null)
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons.star,
-                                                    size: 16,
-                                                    color: Colors.amber,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    app.providerRating!.toStringAsFixed(1),
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      _buildAppStatusBadge(app.status),
-                                    ],
-                                  ),
-                                  if (app.providerBio != null && app.providerBio!.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      app.providerBio!,
-                                      style: theme.textTheme.bodySmall,
+                              padding: const EdgeInsets.all(20.0),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    const Icon(
+                                      Icons.hourglass_empty,
+                                      color: AppColors.textMuted,
+                                      size: 36,
                                     ),
-                                  ],
-                                  if (app.paymentMethods.isNotEmpty) ...[
                                     const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 4,
-                                      children: app.paymentMethods.map((m) {
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.surfaceVariant,
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(color: AppColors.border),
-                                          ),
-                                          child: Text(
-                                            m.displayName,
-                                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                          ),
-                                        );
-                                      }).toList(),
+                                    const Text(
+                                      'Belum ada respon dari tukang sekitar',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Permintaan sedang disiarkan ke mitra tukang di radius 50 km.',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
                                   ],
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      if (canLock) ...[
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: apps.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 10),
+                          itemBuilder: (ctx, i) {
+                            final app = apps[i];
+                            return Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                          child: const Icon(
+                                            Icons.person,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                app.providerName ?? 'Mitra Tukang',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                              if (app.providerRating != null)
+                                                Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.star,
+                                                      size: 16,
+                                                      color: Colors.amber,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      app.providerRating!.toStringAsFixed(1),
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        _buildAppStatusBadge(app.status),
+                                      ],
+                                    ),
+                                    if (app.providerBio != null && app.providerBio!.isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        app.providerBio!,
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ],
+                                    if (app.paymentMethods.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        children: app.paymentMethods.map((m) {
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.surfaceVariant,
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: AppColors.border),
+                                            ),
+                                            child: Text(
+                                              m.displayName,
+                                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
                                         ElevatedButton.icon(
                                           key: Key('lock_provider_${app.providerId}'),
                                           icon: const Icon(Icons.check_circle_outline, size: 16),
@@ -586,34 +626,93 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                                                     app.providerName ?? 'Tukang',
                                                   ),
                                         ),
-                                      ] else if (app.status == ApplicationStatus.selected) ...[
-                                        ElevatedButton.icon(
-                                          icon: const Icon(Icons.chat, size: 16),
-                                          label: const Text('Chat Tukang'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            minimumSize: const Size(110, 36),
-                                          ),
-                                          onPressed: () {
-                                            context.push('/chat?jobId=${job.id}');
-                                          },
-                                        ),
                                       ],
-                                    ],
-                                  ),
-                                ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerLocationMap(Job job, ThemeData theme) {
+    final location = LatLng(job.lat, job.lng);
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Titik Lokasi Rumah / Customer',
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 220,
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: location,
+                initialZoom: 14.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.beres.app',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: location,
+                      width: 44,
+                      height: 44,
+                      child: const Icon(
+                        Icons.location_pin,
+                        color: AppColors.error,
+                        size: 42,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                const Icon(Icons.explore_outlined, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Koordinat Lokasi: ${job.lat.toStringAsFixed(5)}, ${job.lng.toStringAsFixed(5)}',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

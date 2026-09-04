@@ -86,7 +86,7 @@ void main() {
 
     expect(find.text('Detail Permintaan'), findsOneWidget);
     expect(find.text('Perbaikan Pipa Bocor'), findsOneWidget);
-    expect(find.text('Belum ada respon dari tukang sekitar'), findsOneWidget);
-    expect(find.text('Buka Ruang Obrolan & Negosiasi'), findsNothing);
+    expect(find.text('Titik Lokasi Rumah / Customer'), findsOneWidget);
+    expect(find.text('Buka Obrolan'), findsNothing);
   });
 }

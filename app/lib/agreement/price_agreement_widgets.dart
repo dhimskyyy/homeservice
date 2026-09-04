@@ -39,27 +39,34 @@ class PriceAgreementCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.receipt_long,
-                      color: agreement.voided
-                          ? Colors.grey
-                          : AppColors.secondary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Nota Kesepakatan Harga',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.receipt_long,
                         color: agreement.voided
-                            ? Colors.grey.shade700
+                            ? Colors.grey
                             : AppColors.secondary,
+                        size: 20,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Nota Kesepakatan',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: agreement.voided
+                                ? Colors.grey.shade700
+                                : AppColors.secondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 _buildStatusChip(agreement),
               ],
             ),

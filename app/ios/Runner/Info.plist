@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikasi Beres memerlukan izin galeri untuk mengirim foto pekerjaan di chat.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Aplikasi Beres memerlukan izin kamera untuk mengambil foto pekerjaan di chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Aplikasi Beres memerlukan izin mikrofon.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Aplikasi Beres memerlukan lokasi Anda untuk pelacakan live dan penentuan alamat layanan.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Aplikasi Beres memerlukan lokasi Anda saat bekerja di perjalanan.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

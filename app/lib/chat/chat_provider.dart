@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../agreement/agreement_repository.dart';
@@ -99,6 +100,12 @@ class ChatRoomNotifier extends StateNotifier<ChatRoomState> {
           state = state.copyWith(messages: [...state.messages, newMsg]);
         }
       },
+      onMessageUpdated: (updatedMsg) {
+        final updatedList = state.messages.map((m) {
+          return m.id == updatedMsg.id ? updatedMsg : m;
+        }).toList();
+        state = state.copyWith(messages: updatedList);
+      },
     );
 
     _agreementChannel = agreementRepo.subscribeToAgreements(
@@ -110,19 +117,54 @@ class ChatRoomNotifier extends StateNotifier<ChatRoomState> {
     );
   }
 
+  Future<void> markAsRead(String currentUserId) async {
+    try {
+      await chatRepo.markMessagesAsRead(
+        jobId: jobId,
+        currentUserId: currentUserId,
+      );
+    } catch (_) {}
+  }
+
   Future<void> sendMessage({
     required String senderId,
     required String body,
+    String? mediaUrl,
   }) async {
     try {
       final msg = await chatRepo.sendMessage(
         jobId: jobId,
         senderId: senderId,
         body: body,
+        mediaUrl: mediaUrl,
       );
       if (!state.messages.any((m) => m.id == msg.id)) {
         state = state.copyWith(messages: [...state.messages, msg]);
       }
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> sendMediaMessage({
+    required String senderId,
+    required String fileName,
+    required Uint8List bytes,
+    String? caption,
+  }) async {
+    try {
+      final url = await chatRepo.uploadChatMedia(
+        jobId: jobId,
+        fileName: fileName,
+        bytes: bytes,
+      );
+
+      await sendMessage(
+        senderId: senderId,
+        body: caption ?? '',
+        mediaUrl: url,
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;

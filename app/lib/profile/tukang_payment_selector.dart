@@ -373,7 +373,7 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Nomor rekening tiap bank berbeda-beda, silakan isi manual nomor rekening bank pilihan Anda.',
+                  'Silakan Isi Nomor Rekening Bank Pilihan Anda.',
                   style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 12),

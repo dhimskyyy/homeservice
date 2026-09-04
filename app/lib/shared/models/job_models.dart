@@ -152,6 +152,7 @@ class Job {
   final String? categoryName;
   final String? customerName;
   final String? selectedProviderName;
+  final double? selectedProviderRating;
 
   const Job({
     required this.id,
@@ -168,9 +169,22 @@ class Job {
     this.categoryName,
     this.customerName,
     this.selectedProviderName,
+    this.selectedProviderRating,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
+    double? provRating;
+    if (json['provider_profile'] != null && json['provider_profile'] is Map) {
+      final pp = json['provider_profile'] as Map<String, dynamic>;
+      final rawTp = pp['tukang_profiles'];
+      final tp = rawTp is List && rawTp.isNotEmpty
+          ? rawTp.first as Map<String, dynamic>
+          : (rawTp is Map ? rawTp as Map<String, dynamic> : null);
+      if (tp != null) {
+        provRating = (tp['rating_avg'] as num?)?.toDouble();
+      }
+    }
+
     return Job(
       id: json['id'] as String,
       customerId: json['customer_id'] as String,
@@ -196,6 +210,7 @@ class Job {
       selectedProviderName: json['provider_profile'] != null
           ? json['provider_profile']['full_name'] as String?
           : null,
+      selectedProviderRating: provRating,
     );
   }
 
@@ -230,6 +245,7 @@ class Job {
     String? categoryName,
     String? customerName,
     String? selectedProviderName,
+    double? selectedProviderRating,
   }) {
     return Job(
       id: id ?? this.id,
@@ -246,6 +262,7 @@ class Job {
       categoryName: categoryName ?? this.categoryName,
       customerName: customerName ?? this.customerName,
       selectedProviderName: selectedProviderName ?? this.selectedProviderName,
+      selectedProviderRating: selectedProviderRating ?? this.selectedProviderRating,
     );
   }
 }
@@ -435,6 +452,9 @@ class ChatMessage {
   final String jobId;
   final String senderId;
   final String body;
+  final String? mediaUrl;
+  final bool isRead;
+  final DateTime? readAt;
   final DateTime createdAt;
   final String? senderName;
 
@@ -443,6 +463,9 @@ class ChatMessage {
     required this.jobId,
     required this.senderId,
     required this.body,
+    this.mediaUrl,
+    this.isRead = false,
+    this.readAt,
     required this.createdAt,
     this.senderName,
   });
@@ -453,6 +476,9 @@ class ChatMessage {
       jobId: json['job_id'] as String,
       senderId: json['sender_id'] as String,
       body: json['body'] as String? ?? '',
+      mediaUrl: json['media_url'] as String?,
+      isRead: json['is_read'] as bool? ?? false,
+      readAt: json['read_at'] != null ? DateTime.parse(json['read_at'] as String) : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -468,8 +494,35 @@ class ChatMessage {
       'job_id': jobId,
       'sender_id': senderId,
       'body': body,
+      'media_url': mediaUrl,
+      'is_read': isRead,
+      'read_at': readAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
     };
+  }
+
+  ChatMessage copyWith({
+    String? id,
+    String? jobId,
+    String? senderId,
+    String? body,
+    String? mediaUrl,
+    bool? isRead,
+    DateTime? readAt,
+    DateTime? createdAt,
+    String? senderName,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      jobId: jobId ?? this.jobId,
+      senderId: senderId ?? this.senderId,
+      body: body ?? this.body,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      isRead: isRead ?? this.isRead,
+      readAt: readAt ?? this.readAt,
+      createdAt: createdAt ?? this.createdAt,
+      senderName: senderName ?? this.senderName,
+    );
   }
 }
 

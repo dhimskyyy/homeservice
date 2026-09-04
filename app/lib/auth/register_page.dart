@@ -76,14 +76,46 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // 1. Sign Up Akun Supabase
-      await ref.read(authProvider.notifier).signUp(
+      // 1. Sign Up Akun Supabase dengan metadata lengkap
+      final metadata = _isTukang
+          ? {
+              'role': 'tukang',
+              'bio': _bioController.text.trim().isNotEmpty
+                  ? _bioController.text.trim()
+                  : 'Mitra Tukang Beres Profesional',
+              'service_type_ids': _selectedServiceIds.toList(),
+              'payment_methods': _selectedPaymentMethods.map((m) => m.toDbValue()).toList(),
+              'payment_details': _paymentDetails,
+            }
+          : {'role': 'customer'};
+
+      final hasActiveSession = await ref.read(authProvider.notifier).signUp(
             email: _emailController.text.trim(),
             password: _passwordController.text,
             fullName: _nameController.text.trim(),
+            metadata: metadata,
           );
 
-      // 2. Jika Tukang, panggil become_tukang dengan metode pembayaran & rekening/ewallet
+      if (!mounted) return;
+
+      // Jika email konfirmasi diperlukan (belum ada active session)
+      if (!hasActiveSession) {
+        context.go(
+          '/verify-email',
+          extra: {
+            'email': _emailController.text.trim(),
+            'password': _passwordController.text,
+            'isTukang': _isTukang,
+            'bio': _bioController.text.trim(),
+            'serviceTypeIds': _selectedServiceIds.toList(),
+            'paymentMethods': _selectedPaymentMethods,
+            'paymentDetails': _paymentDetails,
+          },
+        );
+        return;
+      }
+
+      // 2. Jika sesi langsung aktif dan mendaftar sebagai Tukang
       if (_isTukang) {
         await ref.read(profileProvider.notifier).becomeTukang(
               bio: _bioController.text.trim().isNotEmpty
@@ -96,22 +128,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       }
 
       if (!mounted) return;
-      final authState = ref.read(authProvider);
-      if (authState.user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isTukang
-                  ? 'Selamat bergabung sebagai Mitra Tukang Beres!'
-                  : 'Pendaftaran berhasil! Selamat datang di Beres.',
-            ),
-            backgroundColor: AppColors.success,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isTukang
+                ? 'Selamat bergabung sebagai Mitra Tukang Beres!'
+                : 'Pendaftaran berhasil! Selamat datang di Beres.',
           ),
-        );
-        context.go('/');
-      }
-    } catch (_) {
-      // Error handled in authProvider state
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pendaftaran gagal: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -288,47 +323,79 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       // KHUSUS FORM TUKANG
                       if (_isTukang) ...[
                         const Divider(height: 32),
-                        Text(
-                          'Kategori Keahlian Jasa yang Dilayani',
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            const Icon(Icons.handyman_outlined, size: 20, color: AppColors.secondary),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Kategori Keahlian Jasa yang Dilayani',
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Pilih minimal satu layanan yang Anda kuasai:',
+                          'Pilih satu atau beberapa keahlian jasa yang Anda tawarkan:',
                           style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
-                        const SizedBox(height: 8),
-                        categoriesAsync.when(
-                          loading: () => const LinearProgressIndicator(),
-                          error: (e, _) => Text('Gagal memuat kategori: $e'),
-                          data: (categories) {
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: categories.map((cat) {
-                                final isSel = _selectedServiceIds.contains(cat.id);
-                                return FilterChip(
-                                  label: Text(cat.name),
-                                  selected: isSel,
-                                  selectedColor: AppColors.secondary.withValues(alpha: 0.15),
-                                  checkmarkColor: AppColors.secondary,
-                                  labelStyle: TextStyle(
-                                    color: isSel ? AppColors.secondary : AppColors.textPrimary,
-                                    fontWeight: isSel ? FontWeight.w600 : FontWeight.normal,
-                                  ),
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedServiceIds.add(cat.id);
-                                      } else {
-                                        _selectedServiceIds.remove(cat.id);
-                                      }
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                            );
-                          },
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _selectedServiceIds.isEmpty
+                                  ? Colors.amber.shade300
+                                  : AppColors.border,
+                            ),
+                          ),
+                          child: categoriesAsync.when(
+                            loading: () => const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            error: (e, _) => _buildFallbackCategoryChips(),
+                            data: (categories) {
+                              final list = categories.isNotEmpty
+                                  ? categories
+                                  : _getStaticDefaultCategories();
+
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: list.map((cat) {
+                                  final isSel = _selectedServiceIds.contains(cat.id);
+                                  return FilterChip(
+                                    avatar: Icon(
+                                      _getCategoryIcon(cat.slug),
+                                      size: 16,
+                                      color: isSel ? Colors.white : AppColors.secondary,
+                                    ),
+                                    label: Text(cat.name),
+                                    selected: isSel,
+                                    selectedColor: AppColors.secondary,
+                                    checkmarkColor: Colors.white,
+                                    labelStyle: TextStyle(
+                                      color: isSel ? Colors.white : AppColors.textPrimary,
+                                      fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                    ),
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedServiceIds.add(cat.id);
+                                        } else {
+                                          _selectedServiceIds.remove(cat.id);
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -435,5 +502,97 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         ),
       ),
     );
+  }
+
+  List<ServiceCategory> _getStaticDefaultCategories() {
+    return [
+      ServiceCategory(
+        id: '691d4d07-6707-4e0b-8a26-1e648fa0b330',
+        name: 'AC',
+        slug: 'ac',
+        sortOrder: 1,
+        createdAt: DateTime.now(),
+      ),
+      ServiceCategory(
+        id: '5b34c4f4-8cd9-4c7e-8047-28fa59481b83',
+        name: 'Cleaning',
+        slug: 'cleaning',
+        sortOrder: 2,
+        createdAt: DateTime.now(),
+      ),
+      ServiceCategory(
+        id: '7e28dab8-e5b2-4e35-881d-a3155fe64af3',
+        name: 'Plumbing',
+        slug: 'plumbing',
+        sortOrder: 3,
+        createdAt: DateTime.now(),
+      ),
+      ServiceCategory(
+        id: '709cdc56-88ef-43e7-a117-73e35c1c3674',
+        name: 'Listrik',
+        slug: 'listrik',
+        sortOrder: 4,
+        createdAt: DateTime.now(),
+      ),
+      ServiceCategory(
+        id: 'feb6ee9c-3bd1-42d0-94e6-13565972be7b',
+        name: 'Handyman',
+        slug: 'handyman',
+        sortOrder: 5,
+        createdAt: DateTime.now(),
+      ),
+    ];
+  }
+
+  Widget _buildFallbackCategoryChips() {
+    final list = _getStaticDefaultCategories();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: list.map((cat) {
+        final isSel = _selectedServiceIds.contains(cat.id);
+        return FilterChip(
+          avatar: Icon(
+            _getCategoryIcon(cat.slug),
+            size: 16,
+            color: isSel ? Colors.white : AppColors.secondary,
+          ),
+          label: Text(cat.name),
+          selected: isSel,
+          selectedColor: AppColors.secondary,
+          checkmarkColor: Colors.white,
+          labelStyle: TextStyle(
+            color: isSel ? Colors.white : AppColors.textPrimary,
+            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+          ),
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _selectedServiceIds.add(cat.id);
+              } else {
+                _selectedServiceIds.remove(cat.id);
+              }
+            });
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  IconData _getCategoryIcon(String slug) {
+    switch (slug) {
+      case 'ac':
+        return Icons.ac_unit;
+      case 'cleaning':
+        return Icons.cleaning_services;
+      case 'plumbing':
+        return Icons.plumbing;
+      case 'listrik':
+        return Icons.electric_bolt;
+      case 'handyman':
+        return Icons.handyman;
+      default:
+        return Icons.home_repair_service;
+    }
   }
 }

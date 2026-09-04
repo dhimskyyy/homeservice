@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'auth/login_page.dart';
 import 'auth/register_page.dart';
+import 'auth/verify_email_page.dart';
 import 'chat/chat_page.dart';
 import 'core/theme.dart';
 import 'home/home_page.dart';
@@ -13,6 +14,7 @@ import 'jobs/job_detail_page.dart';
 import 'jobs/job_list_page.dart';
 import 'profile/become_tukang_page.dart';
 import 'profile/profile_page.dart';
+import 'shared/models/user_profile.dart';
 import 'tracking/tracking_page.dart';
 
 void main() async {
@@ -52,6 +54,21 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final role = state.uri.queryParameters['role'];
         return RegisterPage(initialRole: role);
+      },
+    ),
+    GoRoute(
+      path: '/verify-email',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return VerifyEmailPage(
+          email: extra['email'] as String? ?? state.uri.queryParameters['email'] ?? '',
+          password: extra['password'] as String?,
+          isTukang: extra['isTukang'] as bool? ?? false,
+          bio: extra['bio'] as String?,
+          serviceTypeIds: (extra['serviceTypeIds'] as List?)?.map((e) => e.toString()).toList() ?? [],
+          paymentMethods: (extra['paymentMethods'] as List?)?.cast<PaymentMethod>() ?? [],
+          paymentDetails: (extra['paymentDetails'] as Map<String, dynamic>?) ?? {},
+        );
       },
     ),
     GoRoute(
