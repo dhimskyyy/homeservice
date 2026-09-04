@@ -205,7 +205,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           jobAsync.maybeWhen(
             data: (job) {
               if (job == null || user == null) return const SizedBox.shrink();
-              final isProvider = user.id != job.customerId;
 
               return Row(
                 mainAxisSize: MainAxisSize.min,
@@ -215,17 +214,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       icon: const Icon(Icons.map, color: Colors.white),
                       tooltip: 'Lacak Posisi Live',
                       onPressed: () => context.push('/tracking?jobId=${job.id}'),
-                    ),
-                  // Tombol Buat Nota muncul saat status open ATAU locked untuk tukang
-                  if (isProvider &&
-                      (job.status == JobStatus.open || job.status == JobStatus.locked))
-                    TextButton.icon(
-                      icon: const Icon(Icons.receipt, color: Colors.white, size: 18),
-                      label: const Text(
-                        'Buat Nota',
-                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: () => _showCreateAgreementDialog(job, user.id),
                     ),
                 ],
               );
@@ -320,27 +308,38 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   final isProvider = user.id != job.customerId;
                   if (isProvider &&
                       (job.status == JobStatus.open || job.status == JobStatus.locked)) {
+                    final canCreateNota = job.status == JobStatus.locked;
+
                     return Container(
                       padding: const EdgeInsets.all(12),
-                      color: Colors.amber.shade50,
+                      color: canCreateNota ? Colors.amber.shade50 : Colors.blue.shade50,
                       child: Row(
                         children: [
-                          const Icon(Icons.receipt_long, color: AppColors.secondary, size: 20),
+                          Icon(
+                            canCreateNota ? Icons.receipt_long : Icons.hourglass_top,
+                            color: canCreateNota ? AppColors.secondary : Colors.blue.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Belum ada nota harga. Buat nota untuk mengunci harga dengan customer.',
-                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              canCreateNota
+                                  ? 'Customer telah memilih Anda! Silakan buat nota kesepakatan harga untuk melanjutkan.'
+                                  : 'Negosiasikan harga di chat. Nota kesepakatan dapat dibuat setelah customer memilih & mengunci Anda.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: canCreateNota ? AppColors.textPrimary : Colors.blue.shade900,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
+                              backgroundColor: canCreateNota ? AppColors.secondary : Colors.grey.shade400,
                               minimumSize: const Size(80, 32),
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             ),
-                            onPressed: () => _showCreateAgreementDialog(job, user.id),
+                            onPressed: canCreateNota ? () => _showCreateAgreementDialog(job, user.id) : null,
                             child: const Text('Buat Nota', style: TextStyle(fontSize: 11)),
                           ),
                         ],

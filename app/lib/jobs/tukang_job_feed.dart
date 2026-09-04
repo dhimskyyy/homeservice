@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_provider.dart';
+import '../core/geo_service.dart';
 import '../core/theme.dart';
 import '../shared/models/job_models.dart';
 import 'job_providers.dart';
@@ -103,6 +104,11 @@ class _JobItemCardState extends ConsumerState<_JobItemCard> {
 
   Future<void> _handleRespond() async {
     if (widget.userId == null) return;
+
+    // Tukang wajib mengaktifkan GPS sebelum merespon permintaan
+    final hasGps = await GeoService.ensureTukangGpsEnabled(context);
+    if (!hasGps) return;
+
     setState(() => _isResponding = true);
 
     try {
@@ -113,6 +119,8 @@ class _JobItemCardState extends ConsumerState<_JobItemCard> {
       );
 
       ref.invalidate(hasRespondedProvider(widget.job.id));
+      ref.invalidate(openJobsForTukangProvider);
+      ref.invalidate(tukangJobsProvider);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

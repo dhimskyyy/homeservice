@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../auth/auth_provider.dart';
+import '../core/geo_service.dart';
 import '../core/theme.dart';
 import '../profile/profile_provider.dart';
 import 'job_providers.dart';
@@ -21,21 +22,49 @@ class _CreateJobPageState extends ConsumerState<CreateJobPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
+  final MapController _mapController = MapController();
 
   String? _selectedCategoryId;
   LatLng _selectedLocation = const LatLng(-6.1754, 106.8272); // Default Jakarta
+  String _addressText = 'Memuat lokasi...';
+  bool _isLocating = false;
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
     _selectedCategoryId = widget.initialCategoryId;
+    _updateAddress(_selectedLocation);
+    _focusCurrentLocation();
+  }
+
+  Future<void> _updateAddress(LatLng point) async {
+    final addr = await GeoService.getAddressFromCoordinates(point.latitude, point.longitude);
+    if (mounted) {
+      setState(() {
+        _addressText = addr;
+      });
+    }
+  }
+
+  Future<void> _focusCurrentLocation() async {
+    setState(() => _isLocating = true);
+    final pos = await GeoService.getCurrentDeviceLocation();
+    if (mounted) {
+      setState(() => _isLocating = false);
+      if (pos != null) {
+        setState(() => _selectedLocation = pos);
+        _mapController.move(pos, 15.0);
+        _updateAddress(pos);
+      }
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -184,18 +213,60 @@ class _CreateJobPageState extends ConsumerState<CreateJobPage> {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    const Icon(Icons.location_on, color: AppColors.primary),
+                    const Icon(Icons.location_on, color: AppColors.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'Pilih Lokasi Layanan (Ketuk Peta)',
-                      style: theme.textTheme.titleSmall,
+                      'Pilih Lokasi Layanan',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: _isLocating ? null : _focusCurrentLocation,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '( Fokuskan )',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                            if (_isLocating) ...[
+                              const SizedBox(width: 4),
+                              const SizedBox(
+                                width: 10,
+                                height: 10,
+                                child: CircularProgressIndicator(strokeWidth: 1.5),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Koordinat: ${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.home_outlined, size: 15, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Lokasi: $_addressText',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -206,13 +277,15 @@ class _CreateJobPageState extends ConsumerState<CreateJobPage> {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: FlutterMap(
+                    mapController: _mapController,
                     options: MapOptions(
                       initialCenter: _selectedLocation,
-                      initialZoom: 13.0,
+                      initialZoom: 14.0,
                       onTap: (tapPosition, point) {
                         setState(() {
                           _selectedLocation = point;
                         });
+                        _updateAddress(point);
                       },
                     ),
                     children: [

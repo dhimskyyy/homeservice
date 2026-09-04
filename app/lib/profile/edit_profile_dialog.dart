@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../core/theme.dart';
 import '../shared/models/user_profile.dart';
 import 'profile_provider.dart';
@@ -17,6 +18,8 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+  String? _avatarUrl;
+  bool _isUploadingAvatar = false;
   bool _isSaving = false;
 
   @override
@@ -24,6 +27,7 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.profile.fullName);
     _phoneController = TextEditingController(text: widget.profile.phone ?? '');
+    _avatarUrl = widget.profile.avatarUrl;
   }
 
   @override
@@ -31,6 +35,42 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
     _nameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePickAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+
+    if (picked == null) return;
+
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final url = await ref.read(profileProvider.notifier).uploadAndSetAvatar(
+            fileName: picked.name,
+            bytes: bytes,
+          );
+      setState(() => _avatarUrl = url);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profil berhasil diunggah!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengunggah foto: $e'), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
   }
 
   Future<void> _handleSave() async {
@@ -43,6 +83,7 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
             phone: _phoneController.text.trim().isNotEmpty
                 ? _phoneController.text.trim()
                 : null,
+            avatarUrl: _avatarUrl,
           );
 
       if (!mounted) return;
@@ -140,22 +181,57 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Avatar Preview & Email Badge
+                    // Avatar Preview & Tombol Ganti Foto
                     Center(
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 36,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                            child: Text(
-                              initialLetter,
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
+                          Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              CircleAvatar(
+                                radius: 42,
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                                backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                                    ? NetworkImage(_avatarUrl!)
+                                    : null,
+                                child: _isUploadingAvatar
+                                    ? const CircularProgressIndicator(strokeWidth: 2)
+                                    : (_avatarUrl == null || _avatarUrl!.isEmpty)
+                                        ? Text(
+                                            initialLetter,
+                                            style: theme.textTheme.headlineMedium?.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          )
+                                        : null,
                               ),
-                            ),
+                              Material(
+                                color: AppColors.primary,
+                                shape: const CircleBorder(),
+                                elevation: 2,
+                                child: InkWell(
+                                  onTap: _isUploadingAvatar ? null : _handlePickAvatar,
+                                  customBorder: const CircleBorder(),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(7),
+                                    child: Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            ),
+                            icon: const Icon(Icons.photo_library_outlined, size: 14),
+                            label: const Text('Ganti Foto Profil', style: TextStyle(fontSize: 12)),
+                            onPressed: _isUploadingAvatar ? null : _handlePickAvatar,
+                          ),
+                          const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(

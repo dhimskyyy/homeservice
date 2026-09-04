@@ -10,6 +10,7 @@ import '../jobs/tukang_job_feed.dart';
 import '../profile/profile_provider.dart';
 import '../shared/models/job_models.dart';
 import '../shared/models/user_profile.dart';
+import '../shared/widgets/spinning_refresh_button.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -757,10 +758,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   'Job yang harus diselesaikan',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 18),
-                  tooltip: 'Muat Ulang',
-                  onPressed: () => ref.invalidate(tukangJobsProvider),
+                SpinningRefreshButton(
+                  size: 18,
+                  onRefresh: () async {
+                    ref.invalidate(tukangJobsProvider);
+                  },
                 ),
               ],
             ),
@@ -774,10 +776,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   'Pekerjaan Terbuka (Radius 50 km)',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 18),
-                  tooltip: 'Muat Ulang',
-                  onPressed: () => ref.invalidate(openJobsForTukangProvider),
+                SpinningRefreshButton(
+                  size: 18,
+                  onRefresh: () async {
+                    ref.invalidate(openJobsForTukangProvider);
+                  },
                 ),
               ],
             ),

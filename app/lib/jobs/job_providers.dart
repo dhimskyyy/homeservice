@@ -21,15 +21,23 @@ final customerJobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
 });
 
 final openJobsForTukangProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
+  final user = ref.watch(authProvider).user;
   final repo = ref.watch(jobRepositoryProvider);
-  return repo.getOpenJobs();
+  return repo.getOpenJobs(excludeProviderId: user?.id);
 });
 
 final tukangJobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
   final user = ref.watch(authProvider).user;
   if (user == null) return [];
   final repo = ref.watch(jobRepositoryProvider);
-  return repo.getTukangJobs(user.id);
+  return repo.getTukangJobs(user.id, onlyActive: true);
+});
+
+final tukangAllJobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) return [];
+  final repo = ref.watch(jobRepositoryProvider);
+  return repo.getTukangJobs(user.id, onlyActive: false);
 });
 
 final jobDetailProvider = FutureProvider.autoDispose.family<Job?, String>((ref, jobId) async {

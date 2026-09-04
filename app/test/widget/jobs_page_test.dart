@@ -85,8 +85,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Detail Permintaan'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     expect(find.text('Perbaikan Pipa Bocor'), findsOneWidget);
-    expect(find.text('Titik Lokasi Rumah / Customer'), findsOneWidget);
+    expect(find.text('Titik Lokasi'), findsOneWidget);
+    expect(find.text('( Fokuskan )'), findsOneWidget);
     expect(find.text('Buka Obrolan'), findsNothing);
   });
 }

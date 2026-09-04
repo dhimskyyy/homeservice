@@ -184,6 +184,15 @@ class _MockProfileNotifier extends StateNotifier<ProfileState>
   Future<void> updateProfile({
     String? fullName,
     String? phone,
+    String? avatarUrl,
     bool? isOnline,
   }) async {}
+
+  @override
+  Future<String> uploadAndSetAvatar({
+    required String fileName,
+    required dynamic bytes,
+  }) async {
+    return 'https://example.com/avatar.jpg';
+  }
 }

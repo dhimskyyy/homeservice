@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../shared/models/user_profile.dart';
 
@@ -68,6 +69,24 @@ class ProfileRepository {
     if (lng != null) updates['lng'] = lng;
 
     await c.from('profiles').update(updates).eq('id', userId);
+  }
+
+  Future<String> uploadAvatar({
+    required String userId,
+    required String fileName,
+    required Uint8List bytes,
+  }) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
+
+    final path = '$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    await c.storage.from('avatars').uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+        );
+
+    return c.storage.from('avatars').getPublicUrl(path);
   }
 
   Future<void> becomeTukang({

@@ -47,23 +47,23 @@ class TukangActiveJobsSection extends ConsumerWidget {
                   children: [
                     Icon(
                       Icons.assignment_turned_in_outlined,
-                      size: 40,
+                      size: 44,
                       color: Colors.grey.shade400,
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Belum ada tiket pekerjaan yang Anda ambil',
+                      'Tidak ada job yang aktif saat ini',
                       style: TextStyle(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         color: AppColors.textSecondary,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Silakan lihat permintaan terbuka di bawah dan klik "Respond Permintaan" untuk mulai mengajukan diri ke customer.',
+                      'Lihat tab "Permintaan Terbuka Sekitar" untuk merespon pekerjaan baru dari customer.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                     ),
                   ],
                 ),

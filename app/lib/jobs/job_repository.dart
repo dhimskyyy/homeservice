@@ -49,49 +49,77 @@ class JobRepository {
     return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
   }
 
-  Future<List<Job>> getOpenJobs() async {
+  Future<List<Job>> getOpenJobs({String? excludeProviderId}) async {
     final c = client;
     if (c == null) return [];
 
-    final data = await c
+    List<String> appliedJobIds = [];
+    if (excludeProviderId != null) {
+      final apps = await c
+          .from('job_applications')
+          .select('job_id')
+          .eq('provider_id', excludeProviderId);
+      appliedJobIds = (apps as List).map((a) => a['job_id'].toString()).toList();
+    }
+
+    var query = c
         .from('jobs')
         .select('*, service_categories(name)')
-        .eq('status', 'open')
-        .order('created_at', ascending: false);
+        .eq('status', 'open');
 
-    return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
+    final data = await query.order('created_at', ascending: false);
+    var jobs = (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
+
+    // Saring agar job yang sudah di-respond tukang tidak muncul lagi di feed sekitar
+    if (appliedJobIds.isNotEmpty) {
+      jobs = jobs.where((j) => !appliedJobIds.contains(j.id)).toList();
+    }
+
+    return jobs;
   }
 
-  Future<List<Job>> getTukangJobs(String providerId) async {
+  Future<List<Job>> getTukangJobs(String providerId, {bool onlyActive = true}) async {
     final c = client;
     if (c == null) return [];
 
     // 1. Ambil job ID yang pernah di-apply tukang ini
     final apps = await c
         .from('job_applications')
-        .select('job_id')
+        .select('job_id, status')
         .eq('provider_id', providerId);
 
     final appliedJobIds = (apps as List)
         .map((a) => a['job_id'].toString())
         .toList();
 
+    List<dynamic> data;
     if (appliedJobIds.isEmpty) {
-      final data = await c
+      data = await c
           .from('jobs')
           .select('*, service_categories(name)')
           .eq('selected_provider_id', providerId)
           .order('created_at', ascending: false);
-      return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
+    } else {
+      data = await c
+          .from('jobs')
+          .select('*, service_categories(name)')
+          .or('selected_provider_id.eq.$providerId,id.in.(${appliedJobIds.join(",")})')
+          .order('created_at', ascending: false);
     }
 
-    final data = await c
-        .from('jobs')
-        .select('*, service_categories(name)')
-        .or('selected_provider_id.eq.$providerId,id.in.(${appliedJobIds.join(",")})')
-        .order('created_at', ascending: false);
+    var jobs = data.map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
 
-    return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
+    if (onlyActive) {
+      // Hanya tampilkan pekerjaan yang aktif (open, locked, in_progress)
+      // Pekerjaan yang sudah selesai (done, paid, cancelled) tidak ditampilkan di pekerjaan aktif
+      jobs = jobs.where((j) =>
+          j.status == JobStatus.open ||
+          j.status == JobStatus.locked ||
+          j.status == JobStatus.inProgress
+      ).toList();
+    }
+
+    return jobs;
   }
 
   Future<Job?> getJobDetail(String jobId) async {

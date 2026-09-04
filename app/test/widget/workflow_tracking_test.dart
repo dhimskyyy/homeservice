@@ -105,7 +105,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Mulai Bekerja (Aktifkan GPS)'), findsOneWidget);
+    expect(find.text('Buat Nota Kesepakatan Harga'), findsOneWidget);
+    expect(find.text('Mulai Bekerja (Buat Nota Dulu)'), findsOneWidget);
   });
 
   testWidgets(

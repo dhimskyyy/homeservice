@@ -7,10 +7,12 @@ import 'package:latlong2/latlong.dart';
 import '../agreement/price_agreement_widgets.dart';
 import '../auth/auth_provider.dart';
 import '../chat/chat_provider.dart';
+import '../core/geo_service.dart';
 import '../core/theme.dart';
 import '../review/review_dialogs.dart';
 import '../review/review_provider.dart';
 import '../shared/models/job_models.dart';
+import '../shared/widgets/spinning_refresh_button.dart';
 import '../tracking/location_provider.dart';
 import 'job_progress_tracker.dart';
 import 'job_providers.dart';
@@ -25,7 +27,23 @@ class JobDetailPage extends ConsumerStatefulWidget {
 }
 
 class _JobDetailPageState extends ConsumerState<JobDetailPage> {
+  final MapController _detailMapController = MapController();
   bool _isProcessing = false;
+  String? _addressText;
+
+  @override
+  void dispose() {
+    _detailMapController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAddress(double lat, double lng) async {
+    if (_addressText != null) return;
+    final addr = await GeoService.getAddressFromCoordinates(lat, lng);
+    if (mounted) {
+      setState(() => _addressText = addr);
+    }
+  }
 
   Future<void> _handleLockProvider(String providerId, String providerName) async {
     final confirm = await showDialog<bool>(
@@ -81,6 +99,10 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
   }
 
   Future<void> _handleStartJob(String providerId) async {
+    // Tukang wajib mengaktifkan GPS sebelum mulai bekerja
+    final hasGps = await GeoService.ensureTukangGpsEnabled(context);
+    if (!hasGps) return;
+
     setState(() => _isProcessing = true);
     try {
       final repo = ref.read(jobRepositoryProvider);
@@ -250,11 +272,22 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Kembali',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
         title: const Text('Detail Permintaan'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
+          SpinningRefreshButton(
+            color: Colors.white,
+            onRefresh: () async {
               ref.invalidate(jobDetailProvider(widget.jobId));
               ref.invalidate(jobApplicationsProvider(widget.jobId));
               ref.invalidate(jobAgreementsProvider(widget.jobId));
@@ -385,11 +418,28 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                     if (job.status == JobStatus.locked)
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: activeAgreement != null
+                              ? AppColors.primary
+                              : Colors.grey.shade400,
                         ),
                         icon: const Icon(Icons.play_arrow),
-                        label: const Text('Mulai Bekerja (Aktifkan GPS)'),
-                        onPressed: _isProcessing ? null : () => _handleStartJob(user!.id),
+                        label: Text(
+                          activeAgreement != null
+                              ? 'Mulai Bekerja (Aktifkan GPS)'
+                              : 'Mulai Bekerja (Buat Nota Dulu)',
+                        ),
+                        onPressed: _isProcessing
+                            ? null
+                            : activeAgreement != null
+                                ? () => _handleStartJob(user!.id)
+                                : () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Harap buat nota kesepakatan harga terlebih dahulu sebelum mulai bekerja.'),
+                                        backgroundColor: AppColors.secondary,
+                                      ),
+                                    );
+                                  },
                       ),
                     if (job.status == JobStatus.inProgress)
                       ElevatedButton.icon(
@@ -648,6 +698,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
 
   Widget _buildCustomerLocationMap(Job job, ThemeData theme) {
     final location = LatLng(job.lat, job.lng);
+    _loadAddress(job.lat, job.lng);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -662,8 +713,27 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
                 const Icon(Icons.location_on, color: AppColors.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Titik Lokasi Rumah / Customer',
+                  'Titik Lokasi',
                   style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {
+                    _detailMapController.move(location, 15.0);
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Text(
+                      '( Fokuskan )',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -671,6 +741,7 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           SizedBox(
             height: 220,
             child: FlutterMap(
+              mapController: _detailMapController,
               options: MapOptions(
                 initialCenter: location,
                 initialZoom: 14.0,
@@ -700,13 +771,17 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.explore_outlined, size: 14, color: AppColors.textSecondary),
+                const Icon(Icons.home_outlined, size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Koordinat Lokasi: ${job.lat.toStringAsFixed(5)}, ${job.lng.toStringAsFixed(5)}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    'Lokasi: ${_addressText ?? "${job.lat.toStringAsFixed(4)}, ${job.lng.toStringAsFixed(4)}"}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],

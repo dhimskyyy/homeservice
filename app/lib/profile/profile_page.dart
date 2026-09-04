@@ -117,7 +117,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         : 'Tukang (Penyedia Jasa)';
 
     final isTukangRole = profileState.activeRole == UserRole.tukang;
-    final tukangJobsAsync = ref.watch(tukangJobsProvider);
+    final tukangJobsAsync = ref.watch(tukangAllJobsProvider);
     final jobs = isTukangRole
         ? (tukangJobsAsync.value ?? [])
         : (customerJobsAsync.value ?? []);
@@ -182,15 +182,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             CircleAvatar(
                               radius: 32,
                               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                              child: Text(
-                                profile.fullName.isNotEmpty
-                                    ? profile.fullName[0].toUpperCase()
-                                    : 'U',
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
+                                  ? NetworkImage(profile.avatarUrl!)
+                                  : null,
+                              child: (profile.avatarUrl == null || profile.avatarUrl!.isEmpty)
+                                  ? Text(
+                                      profile.fullName.isNotEmpty
+                                          ? profile.fullName[0].toUpperCase()
+                                          : 'U',
+                                      style: theme.textTheme.headlineMedium?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 16),
                             Expanded(

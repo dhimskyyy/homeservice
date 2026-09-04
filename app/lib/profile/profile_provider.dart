@@ -169,6 +169,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   Future<void> updateProfile({
     String? fullName,
     String? phone,
+    String? avatarUrl,
     bool? isOnline,
   }) async {
     final userId = state.profile?.id;
@@ -180,6 +181,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         userId: userId,
         fullName: fullName,
         phone: phone,
+        avatarUrl: avatarUrl,
         isOnline: isOnline,
       );
       await loadProfile(userId);
@@ -187,6 +189,23 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
+  }
+
+  Future<String> uploadAndSetAvatar({
+    required String fileName,
+    required dynamic bytes,
+  }) async {
+    final userId = state.profile?.id;
+    if (userId == null) throw Exception('Pengguna belum login');
+
+    final url = await _repo.uploadAvatar(
+      userId: userId,
+      fileName: fileName,
+      bytes: bytes,
+    );
+
+    await updateProfile(avatarUrl: url);
+    return url;
   }
 }
 
