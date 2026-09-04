@@ -45,7 +45,7 @@ void main() {
     expect(find.text('AC'), findsOneWidget);
     expect(find.text('Cleaning'), findsOneWidget);
     expect(find.byType(TextFormField), findsOneWidget);
-    expect(find.byType(CheckboxListTile), findsNWidgets(3));
+    expect(find.byType(Switch), findsNWidgets(3));
     final submitButton = find.widgetWithText(ElevatedButton, 'Simpan & Mulai Jadi Tukang');
     expect(submitButton, findsOneWidget);
 

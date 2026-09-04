@@ -24,8 +24,8 @@ void main() {
     expect(find.text('E-Wallet'), findsOneWidget);
     expect(find.text('Transfer Bank'), findsOneWidget);
 
-    // 1. Centang E-Wallet
-    await tester.tap(find.text('E-Wallet'));
+    // 1. Nyalakan Switch E-Wallet
+    await tester.tap(find.byType(Switch).at(1));
     await tester.pumpAndSettle();
 
     expect(find.text('DANA'), findsOneWidget);
@@ -46,10 +46,10 @@ void main() {
     await tester.tap(find.text('OVO'));
     await tester.pumpAndSettle();
 
-    // Verifikasi muncul checkbox pintar: "Nomor OVO sama dengan nomor DANA?"
+    // Verifikasi muncul tombol pintar: "Nomor OVO sama dengan nomor DANA?"
     expect(find.text('Nomor OVO sama dengan nomor DANA?'), findsOneWidget);
 
-    // Centang "Nomor OVO sama dengan nomor DANA?"
+    // Tekan "Nomor OVO sama dengan nomor DANA?"
     await tester.tap(find.text('Nomor OVO sama dengan nomor DANA?'));
     await tester.pumpAndSettle();
 
@@ -58,11 +58,11 @@ void main() {
     expect(ovoField, findsOneWidget);
     expect(find.descendant(of: ovoField, matching: find.text('081234567890')), findsOneWidget);
 
-    // 4. Centang Transfer Bank
-    final transferBankFinder = find.text('Transfer Bank');
-    await tester.ensureVisible(transferBankFinder);
+    // 4. Nyalakan Switch Transfer Bank
+    final switchBankFinder = find.byType(Switch).at(2);
+    await tester.ensureVisible(switchBankFinder);
     await tester.pumpAndSettle();
-    await tester.tap(transferBankFinder);
+    await tester.tap(switchBankFinder);
     await tester.pumpAndSettle();
 
     expect(find.text('Bank BCA'), findsOneWidget);

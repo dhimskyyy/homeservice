@@ -7,6 +7,7 @@ import '../core/theme.dart';
 import '../jobs/job_providers.dart';
 import '../jobs/tukang_active_jobs_section.dart';
 import '../jobs/tukang_job_feed.dart';
+import '../profile/edit_payment_dialog.dart';
 import '../profile/profile_provider.dart';
 import '../shared/models/job_models.dart';
 import '../shared/models/user_profile.dart';
@@ -601,193 +602,363 @@ class _HomePageState extends ConsumerState<HomePage> {
   ) {
     final theme = Theme.of(context);
     final isOnline = profile?.isOnline ?? false;
+    final tukangJobsAsync = ref.watch(tukangJobsProvider);
+    final activeTicketCount = (tukangJobsAsync.value ?? []).length;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Halo, Mitra ${profile?.fullName.isNotEmpty == true ? profile!.fullName : "Tukang"} 🔧',
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Pantau pesanan masuk dan atur ketersediaan Anda',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            color: isOnline
-                ? AppColors.success.withValues(alpha: 0.1)
-                : Colors.grey.shade100,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: isOnline
-                    ? AppColors.success.withValues(alpha: 0.3)
-                    : Colors.grey.shade300,
-              ),
-            ),
-            child: SwitchListTile(
-              title: Text(
-                isOnline ? 'Status: Siap Menerima Kerja' : 'Status: Sedang Offline',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isOnline ? AppColors.success : AppColors.textSecondary,
-                ),
-              ),
-              subtitle: Text(
-                isOnline
-                    ? 'Anda menerima permintaan job dalam radius 50 km.'
-                    : 'Aktifkan untuk mulai menerima notifikasi job.',
-                style: const TextStyle(fontSize: 12),
-              ),
-              value: isOnline,
-              activeThumbColor: AppColors.success,
-              onChanged: (val) {
-                ref.read(profileProvider.notifier).updateProfile(isOnline: val);
-              },
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 28),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${tukang?.ratingAvg.toStringAsFixed(1) ?? "0.0"} ★',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Text(
-                          'Rating Rata-rata',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            color: AppColors.primary, size: 28),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${tukang?.jobCount ?? 0}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Text(
-                          'Pekerjaan Selesai',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Pilihan Tab Pekerjaan Tukang (Scrollable agar tidak overflow)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(tukangJobsProvider);
+        ref.invalidate(openJobsForTukangProvider);
+        if (profile?.id != null) {
+          await ref.read(profileProvider.notifier).loadProfile(profile!.id);
+        }
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. HEADER MITRA TUKANG
+            Row(
               children: [
-                ChoiceChip(
-                  label: const Text('Pekerjaan Saya'),
-                  selected: _tukangTab == 0,
-                  selectedColor: AppColors.secondary.withValues(alpha: 0.18),
-                  checkmarkColor: AppColors.secondary,
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _tukangTab == 0 ? AppColors.secondary : AppColors.textPrimary,
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
+                  backgroundImage: profile?.avatarUrl != null && profile!.avatarUrl!.isNotEmpty
+                      ? NetworkImage(profile.avatarUrl!)
+                      : null,
+                  child: (profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty)
+                      ? Text(
+                          profile?.fullName.isNotEmpty == true ? profile!.fullName[0].toUpperCase() : 'T',
+                          style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold, fontSize: 18),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              profile?.fullName.isNotEmpty == true ? profile!.fullName : 'Mitra Tukang',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Mitra Beres',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        profile?.email ?? '',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
-                  onSelected: (_) => setState(() => _tukangTab = 0),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // 2. KARTU PUSAT KONTROL KESIAPAN KERJA & RADAR
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isOnline ? AppColors.success.withValues(alpha: 0.5) : AppColors.border,
+                  width: isOnline ? 1.5 : 1,
+                ),
+              ),
+              color: isOnline ? AppColors.success.withValues(alpha: 0.04) : Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isOnline ? AppColors.success : Colors.grey.shade400,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isOnline ? 'Status: Siap Menerima Order' : 'Status: Sedang Offline',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isOnline ? AppColors.success : AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Switch.adaptive(
+                          value: isOnline,
+                          activeThumbColor: AppColors.success,
+                          onChanged: (val) {
+                            ref.read(profileProvider.notifier).updateProfile(isOnline: val);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.radar, size: 14, color: isOnline ? AppColors.success : AppColors.textMuted),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            isOnline
+                                ? 'Radar aktif: Anda dapat menerima pesanan dalam radius 50 km'
+                                : 'Aktifkan sakelar di atas agar profil Anda terlihat oleh customer',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // 3. KARTU STATISTIK 3 KOLOM
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 22),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${tukang?.ratingAvg.toStringAsFixed(1) ?? "0.0"} ★',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const Text('Rating', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('Job Sekitar'),
-                  selected: _tukangTab == 1,
-                  selectedColor: AppColors.primary.withValues(alpha: 0.18),
-                  checkmarkColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _tukangTab == 1 ? AppColors.primary : AppColors.textPrimary,
+                Expanded(
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.task_alt, color: AppColors.primary, size: 22),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${tukang?.jobCount ?? 0}',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const Text('Selesai', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
                   ),
-                  onSelected: (_) => setState(() => _tukangTab = 1),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.confirmation_num_outlined, color: AppColors.secondary, size: 22),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$activeTicketCount',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const Text('Job Aktif', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
 
-          if (_tukangTab == 0) ...[
+            const SizedBox(height: 14),
+
+            // 4. QUICK ACTION BAR TUKANG
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Job yang harus diselesaikan',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.payment_outlined, size: 16),
+                    label: const Text('Kelola Pembayaran', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    onPressed: () {
+                      if (tukang != null) {
+                        EditPaymentDialog.show(context, tukang);
+                      }
+                    },
+                  ),
                 ),
-                SpinningRefreshButton(
-                  size: 18,
-                  onRefresh: () async {
-                    ref.invalidate(tukangJobsProvider);
-                  },
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.person_outline, size: 16),
+                    label: const Text('Profil & Riwayat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    onPressed: () => context.push('/profile'),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            const TukangActiveJobsSection(),
-          ] else ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Pekerjaan Terbuka (Radius 50 km)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
-                ),
-                SpinningRefreshButton(
-                  size: 18,
-                  onRefresh: () async {
-                    ref.invalidate(openJobsForTukangProvider);
-                  },
-                ),
-              ],
+
+            const SizedBox(height: 18),
+
+            // 5. BANNER TIPS OPERASIONAL TUKANG
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.blue, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Tips: Selalu sepakati harga & buat nota di chat sebelum menekan tombol Mulai Bekerja.',
+                      style: TextStyle(fontSize: 11, color: Colors.blue, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
-            const TukangJobFeed(),
+
+            const SizedBox(height: 20),
+
+            // 6. TAB NAVIGASI PEKERJAAN TUKANG
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: Text('Pekerjaan Saya ($activeTicketCount)'),
+                    selected: _tukangTab == 0,
+                    selectedColor: AppColors.secondary.withValues(alpha: 0.18),
+                    checkmarkColor: AppColors.secondary,
+                    labelStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _tukangTab == 0 ? AppColors.secondary : AppColors.textPrimary,
+                    ),
+                    onSelected: (_) => setState(() => _tukangTab = 0),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Permintaan Terbuka Sekitar'),
+                    selected: _tukangTab == 1,
+                    selectedColor: AppColors.primary.withValues(alpha: 0.18),
+                    checkmarkColor: AppColors.primary,
+                    labelStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _tukangTab == 1 ? AppColors.primary : AppColors.textPrimary,
+                    ),
+                    onSelected: (_) => setState(() => _tukangTab = 1),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            if (_tukangTab == 0) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Job yang harus diselesaikan',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  SpinningRefreshButton(
+                    size: 18,
+                    onRefresh: () async {
+                      ref.invalidate(tukangJobsProvider);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const TukangActiveJobsSection(),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Pekerjaan Terbuka (Radius 50 km)',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  SpinningRefreshButton(
+                    size: 18,
+                    onRefresh: () async {
+                      ref.invalidate(openJobsForTukangProvider);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const TukangJobFeed(),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

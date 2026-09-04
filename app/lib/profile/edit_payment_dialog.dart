@@ -10,6 +10,15 @@ class EditPaymentDialog extends ConsumerStatefulWidget {
 
   const EditPaymentDialog({super.key, required this.tukangProfile});
 
+  static Future<void> show(BuildContext context, TukangProfile tukangProfile) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => EditPaymentDialog(tukangProfile: tukangProfile),
+    );
+  }
+
   @override
   ConsumerState<EditPaymentDialog> createState() => _EditPaymentDialogState();
 }
@@ -67,122 +76,112 @@ class _EditPaymentDialogState extends ConsumerState<EditPaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 650),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.secondary, Color(0xFFB45309)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.payment, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Metode Pembayaran',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Kelola rekening & e-wallet penerimaan dana',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20.0),
-                child: TukangPaymentSelector(
-                  initialMethods: _methods,
-                  initialDetails: _details,
-                  onChanged: (methods, details) {
-                    _methods = methods;
-                    _details = details;
-                  },
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 44),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Batal'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _handleSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.secondary,
-                        minimumSize: const Size(0, 44),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Simpan Perubahan',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
+      ),
+      padding: EdgeInsets.only(
+        top: 12,
+        left: 20,
+        right: 20,
+        bottom: bottomInset > 0 ? bottomInset + 16 : 28,
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Header Title
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Metode Pembayaran',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Kelola nomor rekening bank dan e-wallet penerimaan dana',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textMuted),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+
+          // Content Scrollable
+          Expanded(
+            child: SingleChildScrollView(
+              child: TukangPaymentSelector(
+                initialMethods: _methods,
+                initialDetails: _details,
+                onChanged: (methods, details) {
+                  _methods = methods;
+                  _details = details;
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tombol Aksi Simpan
+          ElevatedButton(
+            onPressed: _isSaving ? null : _handleSave,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Simpan Metode Pembayaran',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+          ),
+        ],
       ),
     );
   }

@@ -23,7 +23,6 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
   bool _enableEwallet = false;
   bool _enableBank = false;
 
-  // E-wallets: dana, ovo, gopay, shopeepay
   final Map<String, bool> _ewalletSelected = {
     'DANA': false,
     'OVO': false,
@@ -38,15 +37,6 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
     'ShopeePay': TextEditingController(),
   };
 
-  // State untuk checkbox "samakan nomor"
-  final Map<String, bool> _ewalletSameAsPrevious = {
-    'DANA': false,
-    'OVO': false,
-    'GoPay': false,
-    'ShopeePay': false,
-  };
-
-  // Banks: BCA, BNI, BRI, Mandiri, BSI
   final Map<String, bool> _bankSelected = {
     'BCA': false,
     'BNI': false,
@@ -70,7 +60,6 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
     _enableEwallet = widget.initialMethods.contains(PaymentMethod.ewallet);
     _enableBank = widget.initialMethods.contains(PaymentMethod.bankTransfer);
 
-    // Muat initial details jika ada
     final ewalletData = widget.initialDetails['ewallet'];
     if (ewalletData is Map) {
       ewalletData.forEach((key, val) {
@@ -78,6 +67,7 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
         if (_ewalletControllers.containsKey(normKey) && val != null) {
           _ewalletSelected[normKey] = true;
           _ewalletControllers[normKey]!.text = val.toString();
+          _enableEwallet = true;
         }
       });
     }
@@ -89,11 +79,11 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
         if (_bankControllers.containsKey(normKey) && val != null) {
           _bankSelected[normKey] = true;
           _bankControllers[normKey]!.text = val.toString();
+          _enableBank = true;
         }
       });
     }
 
-    // Pasang listener untuk propagate perubahan ke parent
     for (final c in _ewalletControllers.values) {
       c.addListener(_emitChange);
     }
@@ -160,7 +150,6 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
     widget.onChanged(methods, details);
   }
 
-  // Mendapatkan nomor e-wallet pertama yang sudah terisi dan daftar nama e-wallet yang memiliki nomor tersebut
   (String, List<String>)? _getExistingEwalletNumberAndNames(String currentName) {
     String? foundNumber;
     final matchingNames = <String>[];
@@ -185,257 +174,392 @@ class _TukangPaymentSelectorState extends State<TukangPaymentSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. CASH (TUNAI)
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          activeColor: AppColors.primary,
-          title: const Text('Tunai (Cash)', style: TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: const Text('Menerima pembayaran uang tunai langsung di tempat.', style: TextStyle(fontSize: 12)),
-          value: _enableCash,
-          onChanged: (val) {
-            setState(() {
-              _enableCash = val ?? false;
-              _emitChange();
-            });
-          },
-        ),
-
-        const Divider(height: 24),
-
-        // 2. E-WALLET
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          activeColor: AppColors.primary,
-          title: const Text('E-Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: const Text('DANA, OVO, GoPay, ShopeePay', style: TextStyle(fontSize: 12)),
-          value: _enableEwallet,
-          onChanged: (val) {
-            setState(() {
-              _enableEwallet = val ?? false;
-              _emitChange();
-            });
-          },
-        ),
-
-        if (_enableEwallet) ...[
-          Container(
-            margin: const EdgeInsets.only(left: 8, bottom: 16),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
+        // 1. KARTU PEMBAYARAN TUNAI (CASH)
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: _enableCash ? AppColors.primary : AppColors.border,
+              width: _enableCash ? 1.5 : 1,
             ),
+          ),
+          color: _enableCash ? AppColors.primary.withValues(alpha: 0.04) : Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _enableCash
+                        ? AppColors.primary.withValues(alpha: 0.12)
+                        : Colors.grey.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.payments_outlined,
+                    color: _enableCash ? AppColors.primary : Colors.grey,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tunai (Cash)',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Text(
+                        'Menerima uang tunai langsung dari customer saat pekerjaan selesai.',
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: _enableCash,
+                  activeThumbColor: AppColors.primary,
+                  onChanged: (val) {
+                    setState(() {
+                      _enableCash = val;
+                      _emitChange();
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // 2. KARTU E-WALLET DIGITAL
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: _enableEwallet ? Colors.blue.shade400 : AppColors.border,
+              width: _enableEwallet ? 1.5 : 1,
+            ),
+          ),
+          color: _enableEwallet ? Colors.blue.shade50.withValues(alpha: 0.3) : Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pilih E-Wallet yang Anda Sediakan:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
-                ),
-                const SizedBox(height: 8),
-                ..._ewalletSelected.keys.map((ewalletName) {
-                  final isSelected = _ewalletSelected[ewalletName] ?? false;
-                  final existingInfo = _getExistingEwalletNumberAndNames(ewalletName);
-                  final isSameChecked = _ewalletSameAsPrevious[ewalletName] ?? false;
-
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _enableEwallet ? Colors.blue.shade100 : Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: _enableEwallet ? Colors.blue.shade700 : Colors.grey,
+                        size: 24,
+                      ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
+                    const SizedBox(width: 14),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          activeColor: AppColors.primary,
-                          title: Text(
-                            ewalletName,
-                            style: TextStyle(
+                          Text(
+                            'E-Wallet',
+                            style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isSelected ? AppColors.primary : AppColors.textPrimary,
                             ),
                           ),
-                          value: isSelected,
-                          onChanged: (val) {
-                            setState(() {
-                              _ewalletSelected[ewalletName] = val ?? false;
-                              if (!(_ewalletSelected[ewalletName]!)) {
-                                _ewalletControllers[ewalletName]!.clear();
-                                _ewalletSameAsPrevious[ewalletName] = false;
-                              }
-                              _emitChange();
-                            });
-                          },
+                          const Text(
+                            'Menerima pembayaran lewat DANA, OVO, GoPay, atau ShopeePay.',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: _enableEwallet,
+                      activeThumbColor: Colors.blue.shade700,
+                      onChanged: (val) {
+                        setState(() {
+                          _enableEwallet = val;
+                          _emitChange();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+
+                if (_enableEwallet) ...[
+                  const Divider(height: 24),
+                  const Text(
+                    'Pilih Dompet Digital Anda:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Chips Pilihan E-Wallet
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _ewalletSelected.keys.map((name) {
+                      final isSelected = _ewalletSelected[name] ?? false;
+                      return FilterChip(
+                        avatar: Icon(
+                          isSelected ? Icons.check_circle : Icons.account_balance_wallet,
+                          size: 16,
+                          color: isSelected ? Colors.white : Colors.blue.shade700,
                         ),
-                        if (isSelected) ...[
-                          const SizedBox(height: 6),
-                          // Jika ada nomor e-wallet yang sudah terisi sebelumnya
-                          if (existingInfo != null) ...[
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: isSameChecked,
-                                  activeColor: AppColors.primary,
-                                  onChanged: (checked) {
+                        label: Text(name),
+                        selected: isSelected,
+                        selectedColor: Colors.blue.shade700,
+                        checkmarkColor: Colors.white,
+                        labelStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
+                        onSelected: (val) {
+                          setState(() {
+                            _ewalletSelected[name] = val;
+                            if (!val) {
+                              _ewalletControllers[name]!.clear();
+                            }
+                            _emitChange();
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  // Fields Input Nomor E-Wallet
+                  const SizedBox(height: 12),
+                  ..._ewalletSelected.entries.where((e) => e.value).map((entry) {
+                    final name = entry.key;
+                    final existing = _getExistingEwalletNumberAndNames(name);
+
+                    return Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Nomor Akun $name',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue),
+                              ),
+                              if (existing != null)
+                                TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                  ),
+                                  icon: const Icon(Icons.copy, size: 13),
+                                  label: Text(
+                                    'Nomor $name sama dengan nomor ${existing.$2.join(' dan ')}?',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                  onPressed: () {
                                     setState(() {
-                                      _ewalletSameAsPrevious[ewalletName] = checked ?? false;
-                                      if (_ewalletSameAsPrevious[ewalletName]!) {
-                                        _ewalletControllers[ewalletName]!.text = existingInfo.$1;
-                                      }
+                                      _ewalletControllers[name]!.text = existing.$1;
                                       _emitChange();
                                     });
                                   },
                                 ),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _ewalletSameAsPrevious[ewalletName] = !isSameChecked;
-                                        if (_ewalletSameAsPrevious[ewalletName]!) {
-                                          _ewalletControllers[ewalletName]!.text = existingInfo.$1;
-                                        }
-                                        _emitChange();
-                                      });
-                                    },
-                                    child: Text(
-                                      'Nomor $ewalletName sama dengan nomor ${existingInfo.$2.join(' dan ')}?',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                          ],
+                            ],
+                          ),
+                          const SizedBox(height: 6),
                           TextFormField(
-                            controller: _ewalletControllers[ewalletName],
+                            controller: _ewalletControllers[name],
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
-                              labelText: 'Nomor $ewalletName',
+                              labelText: 'Nomor $name',
                               hintText: 'Misal: 081234567890',
-                              prefixIcon: const Icon(Icons.account_balance_wallet_outlined, size: 20),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              prefixIcon: const Icon(Icons.phone_android, size: 18, color: Colors.blue),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                );
-              }),
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
-        ],
-
-        const Divider(height: 24),
-
-        // 3. TRANSFER BANK
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          activeColor: AppColors.primary,
-          title: const Text('Transfer Bank', style: TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: const Text('BCA, BNI, BRI, Mandiri, BSI', style: TextStyle(fontSize: 12)),
-          value: _enableBank,
-          onChanged: (val) {
-            setState(() {
-              _enableBank = val ?? false;
-              _emitChange();
-            });
-          },
         ),
 
-        if (_enableBank) ...[
-          Container(
-            margin: const EdgeInsets.only(left: 8, bottom: 16),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.amber.shade200),
+        const SizedBox(height: 14),
+
+        // 3. KARTU TRANSFER BANK
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: _enableBank ? AppColors.secondary : AppColors.border,
+              width: _enableBank ? 1.5 : 1,
             ),
+          ),
+          color: _enableBank ? AppColors.secondary.withValues(alpha: 0.04) : Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pilih Rekening Bank yang Anda Miliki:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.secondary),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Silakan Isi Nomor Rekening Bank Pilihan Anda.',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 12),
-                ..._bankSelected.keys.map((bankName) {
-                  final isSelected = _bankSelected[bankName] ?? false;
-
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(color: isSelected ? AppColors.secondary : AppColors.border),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _enableBank
+                            ? AppColors.secondary.withValues(alpha: 0.12)
+                            : Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.account_balance_outlined,
+                        color: _enableBank ? AppColors.secondary : Colors.grey,
+                        size: 24,
+                      ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
+                    const SizedBox(width: 14),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          activeColor: AppColors.secondary,
-                          title: Text(
-                            'Bank $bankName',
-                            style: TextStyle(
+                          Text(
+                            'Transfer Bank',
+                            style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isSelected ? AppColors.secondary : AppColors.textPrimary,
                             ),
                           ),
-                          value: isSelected,
-                          onChanged: (val) {
-                            setState(() {
-                              _bankSelected[bankName] = val ?? false;
-                              if (!(_bankSelected[bankName]!)) {
-                                _bankControllers[bankName]!.clear();
-                              }
-                              _emitChange();
-                            });
-                          },
+                          const Text(
+                            'Menerima pembayaran lewat transfer rekening bank (BCA, BNI, BRI, dll).',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: _enableBank,
+                      activeThumbColor: AppColors.secondary,
+                      onChanged: (val) {
+                        setState(() {
+                          _enableBank = val;
+                          _emitChange();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+
+                if (_enableBank) ...[
+                  const Divider(height: 24),
+                  const Text(
+                    'Pilih Bank yang Anda Miliki:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Chips Pilihan Bank
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _bankSelected.keys.map((name) {
+                      final isSelected = _bankSelected[name] ?? false;
+                      return FilterChip(
+                        avatar: Icon(
+                          isSelected ? Icons.check_circle : Icons.credit_card,
+                          size: 16,
+                          color: isSelected ? Colors.white : AppColors.secondary,
                         ),
-                        if (isSelected) ...[
-                          const SizedBox(height: 8),
+                        label: Text('Bank $name'),
+                        selected: isSelected,
+                        selectedColor: AppColors.secondary,
+                        checkmarkColor: Colors.white,
+                        labelStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
+                        onSelected: (val) {
+                          setState(() {
+                            _bankSelected[name] = val;
+                            if (!val) {
+                              _bankControllers[name]!.clear();
+                            }
+                            _emitChange();
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  // Fields Input Nomor Rekening Manual
+                  const SizedBox(height: 12),
+                  ..._bankSelected.entries.where((e) => e.value).map((entry) {
+                    final name = entry.key;
+
+                    return Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nomor Rekening Bank $name',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.secondary),
+                          ),
+                          const SizedBox(height: 6),
                           TextFormField(
-                            controller: _bankControllers[bankName],
+                            controller: _bankControllers[name],
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'Nomor Rekening Bank $bankName',
+                              labelText: 'Nomor Rekening Bank $name',
                               hintText: 'Misal: 1234567890',
-                              prefixIcon: const Icon(Icons.credit_card_outlined, size: 20),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              prefixIcon: const Icon(Icons.credit_card, size: 18, color: AppColors.secondary),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                );
-              }),
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
-        ],
+        ),
       ],
     );
   }

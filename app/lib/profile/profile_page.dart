@@ -18,7 +18,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  int _selectedHistoryTab = 0; // 0: Semua / Aktif, 1: Selesai
+  int _selectedHistoryTab = 0; // 0: Aktif, 1: Selesai, 2: Dibatalkan
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final shouldLogout = await showDialog<bool>(
@@ -62,7 +62,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ],
         ),
         content: Text(
-          'Apakah Anda yakin ingin menghapus permintaan "${job.title}" dari riwayat Anda?',
+          'Apakah Anda yakin ingin menghapus tiket "${job.title}" dari riwayat Anda?',
         ),
         actions: [
           TextButton(
@@ -112,11 +112,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       );
     }
 
-    final activeRoleLabel = profileState.activeRole == UserRole.customer
-        ? 'Customer (Pencari Jasa)'
-        : 'Tukang (Penyedia Jasa)';
-
     final isTukangRole = profileState.activeRole == UserRole.tukang;
+    final activeRoleLabel = isTukangRole ? 'Tukang (Penyedia Jasa)' : 'Customer (Pencari Jasa)';
+
     final tukangJobsAsync = ref.watch(tukangAllJobsProvider);
     final jobs = isTukangRole
         ? (tukangJobsAsync.value ?? [])
@@ -154,74 +152,80 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil Saya'),
-        // Icon logout di AppBar kanan atas sudah dihapus sesuai revisi
       ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(customerJobsProvider);
             ref.invalidate(tukangJobsProvider);
+            ref.invalidate(tukangAllJobsProvider);
             if (profile.id.isNotEmpty) {
               await ref.read(profileProvider.notifier).loadProfile(profile.id);
             }
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header Card Profil dengan tombol Edit
+                // 1. HEADER KARTU PROFIL UTAMA (Clean & Modern)
                 Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(18.0),
                     child: Column(
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 32,
-                              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                              backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
-                                  ? NetworkImage(profile.avatarUrl!)
-                                  : null,
-                              child: (profile.avatarUrl == null || profile.avatarUrl!.isEmpty)
-                                  ? Text(
-                                      profile.fullName.isNotEmpty
-                                          ? profile.fullName[0].toUpperCase()
-                                          : 'U',
-                                      style: theme.textTheme.headlineMedium?.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    )
-                                  : null,
+                            Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 34,
+                                  backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                                  backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
+                                      ? NetworkImage(profile.avatarUrl!)
+                                      : null,
+                                  child: (profile.avatarUrl == null || profile.avatarUrl!.isEmpty)
+                                      ? Text(
+                                          profile.fullName.isNotEmpty
+                                              ? profile.fullName[0].toUpperCase()
+                                              : 'U',
+                                          style: theme.textTheme.headlineMedium?.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    profile.fullName.isNotEmpty
-                                        ? profile.fullName
-                                        : 'Pengguna Beres',
+                                    profile.fullName.isNotEmpty ? profile.fullName : 'Pengguna Beres',
                                     style: theme.textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 16,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     profile.email,
-                                    style: theme.textTheme.bodySmall,
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                   ),
                                   if (profile.phone != null && profile.phone!.isNotEmpty) ...[
                                     const SizedBox(height: 2),
                                     Text(
                                       profile.phone!,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
+                                      style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                                     ),
                                   ],
                                   const SizedBox(height: 6),
@@ -231,7 +235,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       if (profile.isCustomer)
                                         _buildRoleBadge('Customer', Colors.blue.shade700),
                                       if (profile.isTukang)
-                                        _buildRoleBadge('Tukang', AppColors.secondary),
+                                        _buildRoleBadge('Mitra Tukang', AppColors.secondary),
                                       if (profile.isAdmin)
                                         _buildRoleBadge('Admin', Colors.purple.shade700),
                                     ],
@@ -241,128 +245,83 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ),
                           ],
                         ),
-                        const Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(120, 36),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              ),
-                              icon: const Icon(Icons.edit, size: 16),
-                              label: const Text('Edit Profil', style: TextStyle(fontSize: 12)),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (ctx) => EditProfileDialog(profile: profile),
-                                );
-                              },
-                            ),
-                          ],
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 38),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Edit Profil & Foto', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          onPressed: () => EditProfileDialog.show(context, profile),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Kartu Status Mode Aktif & Switch Role (BR-1.6)
-                if (profileState.canSwitchRole)
+                // 2. KARTU STATISTIK METRIKS
+                if (profile.isTukang && tukang != null)
                   Card(
-                    color: AppColors.primary.withValues(alpha: 0.05),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppColors.border),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.swap_horiz,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Mode Saat Ini: $activeRoleLabel',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            key: const Key('switch_role_button'),
-                            icon: const Icon(Icons.sync_alt),
-                            label: Text(
-                              profileState.activeRole == UserRole.customer
-                                  ? 'Beralih ke Mode Tukang'
-                                  : 'Beralih ke Mode Customer',
-                            ),
-                            onPressed: () {
-                              ref.read(profileProvider.notifier).switchRole();
-                            },
-                          ),
+                          _buildStatColumn('Rating', '${tukang.ratingAvg.toStringAsFixed(1)} ★', Icons.star, Colors.amber.shade600),
+                          Container(width: 1, height: 32, color: AppColors.border),
+                          _buildStatColumn('Selesai', '${tukang.jobCount} Job', Icons.task_alt, AppColors.primary),
+                          Container(width: 1, height: 32, color: AppColors.border),
+                          _buildStatColumn('Status', profile.isOnline ? 'Online' : 'Offline', Icons.circle, profile.isOnline ? AppColors.success : Colors.grey),
                         ],
                       ),
                     ),
                   ),
 
-                // Jika belum tukang, tampilkan ajakan daftar jadi tukang
-                if (!profile.isTukang) ...[
-                  const SizedBox(height: 16),
+                // 3. KARTU SWITCH ROLE (Hanya jika akun punya 2 role sesuai BR-1.6)
+                if (profileState.canSwitchRole) ...[
+                  const SizedBox(height: 12),
                   Card(
-                    color: AppColors.secondary.withValues(alpha: 0.08),
+                    elevation: 0,
+                    color: AppColors.primary.withValues(alpha: 0.04),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: AppColors.secondary.withValues(alpha: 0.3),
-                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      padding: const EdgeInsets.all(14.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              const Icon(
-                                Icons.handyman,
-                                color: AppColors.secondary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Ingin Menjadi Mitra Tukang?',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: AppColors.secondary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              const Icon(Icons.swap_horiz, color: AppColors.primary, size: 22),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Peran Aktif Saat Ini', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                  Text(activeRoleLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+                                ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Dapatkan pesanan jasa perbaikan rumah di sekitar wilayah Anda.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
                           ElevatedButton(
+                            key: const Key('switch_role_button'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
+                              backgroundColor: AppColors.primary,
+                              minimumSize: const Size(80, 34),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
                             ),
-                            onPressed: () => context.push('/become-tukang'),
-                            child: const Text('Daftar Jadi Tukang Sekarang'),
+                            onPressed: () => ref.read(profileProvider.notifier).switchRole(),
+                            child: const Text('Ganti', style: TextStyle(fontSize: 12)),
                           ),
                         ],
                       ),
@@ -370,104 +329,63 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ],
 
-                // Info khusus profil tukang jika ada
+                // 4. KARTU DETAIL TUKANG (Keahlian, Metode Pembayaran & Status Online)
                 if (profile.isTukang && tukang != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Profil Jasa Tukang',
-                            style: theme.textTheme.titleSmall,
-                          ),
-                          const Divider(height: 24),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: _buildStatItem(
-                                  'Rating',
-                                  '${tukang.ratingAvg.toStringAsFixed(1)} ★',
-                                  Icons.star,
-                                  Colors.amber.shade700,
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildStatItem(
-                                  'Selesai',
-                                  '${tukang.jobCount} Job',
-                                  Icons.task_alt,
-                                  AppColors.primary,
-                                ),
+                              Text('Pengaturan Layanan Tukang', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                              Switch.adaptive(
+                                value: profile.isOnline,
+                                activeThumbColor: AppColors.success,
+                                onChanged: (val) => ref.read(profileProvider.notifier).updateProfile(isOnline: val),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
                           Text(
-                            'Bio / Keahlian:',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            profile.isOnline ? 'Siap menerima pesanan di radius 50 km' : 'Sedang offline / tidak menerima pesanan',
+                            style: TextStyle(fontSize: 11, color: profile.isOnline ? AppColors.success : AppColors.textSecondary),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            tukang.bio.isNotEmpty ? tukang.bio : 'Belum ada bio.',
-                            style: theme.textTheme.bodyMedium,
-                          ),
+                          const Divider(height: 20),
+                          const Text('Bio / Keahlian:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text(tukang.bio.isNotEmpty ? tukang.bio : 'Belum ada bio keahlian.', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                           const SizedBox(height: 12),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  'Metode Pembayaran Diterima:',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
+                              const Text('Metode Pembayaran:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  foregroundColor: AppColors.secondary,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                ),
+                                style: TextButton.styleFrom(visualDensity: VisualDensity.compact, foregroundColor: AppColors.secondary),
                                 icon: const Icon(Icons.edit, size: 14),
-                                label: const Text('Kelola', style: TextStyle(fontSize: 12)),
+                                label: const Text('Kelola', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                 onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => EditPaymentDialog(tukangProfile: tukang),
-                                  );
+                                  EditPaymentDialog.show(context, tukang);
                                 },
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Wrap(
                             spacing: 6,
                             children: tukang.paymentMethods.map((m) {
                               return Chip(
-                                label: Text(
-                                  m.displayName,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                                label: Text(m.displayName, style: const TextStyle(fontSize: 11)),
                                 padding: EdgeInsets.zero,
                               );
                             }).toList(),
-                          ),
-                          const SizedBox(height: 12),
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Status Siap Terima Pekerjaan (Online)'),
-                            value: profile.isOnline,
-                            activeThumbColor: AppColors.success,
-                            onChanged: (val) {
-                              ref
-                                  .read(profileProvider.notifier)
-                                  .updateProfile(isOnline: val);
-                            },
                           ),
                         ],
                       ),
@@ -475,30 +393,55 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ],
 
-                const SizedBox(height: 24),
+                // 5. AJAKAN DAFTAR TUKANG (Jika akun belum punya role tukang)
+                if (!profile.isTukang) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 0,
+                    color: AppColors.secondary.withValues(alpha: 0.06),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: AppColors.secondary.withValues(alpha: 0.25)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.handyman, color: AppColors.secondary, size: 22),
+                              const SizedBox(width: 8),
+                              Text('Ingin Menjadi Mitra Tukang?', style: theme.textTheme.titleSmall?.copyWith(color: AppColors.secondary, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text('Buka keahlian jasa Anda dan terima pesanan dari customer di sekitar radius 50 km.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, minimumSize: const Size(double.infinity, 38)),
+                            onPressed: () => context.push('/become-tukang'),
+                            child: const Text('Daftar Jadi Tukang Sekarang', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
-                // SECTION: History Permintaan Saya (Geser ke Kiri untuk Menghapus)
+                const SizedBox(height: 20),
+
+                // 6. RIWAYAT PERMINTAAN SAYA (History Permintaan)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'History Permintaan Saya',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Geser kiri ➔ hapus',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
+                    Text('History Permintaan Saya', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    const Text('Geser kiri ➔ hapus', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                   ],
                 ),
                 const SizedBox(height: 8),
 
-                // Toggle Tab: Sedang Berjalan vs Selesai vs Dibatalkan
+                // Tab Filter
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -536,7 +479,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Center(
@@ -546,10 +489,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           const SizedBox(height: 8),
                           Text(
                             _selectedHistoryTab == 0
-                                ? 'Tidak ada permintaan yang sedang aktif'
+                                ? 'Tidak ada pekerjaan yang sedang aktif'
                                 : _selectedHistoryTab == 1
-                                    ? 'Belum ada riwayat permintaan selesai'
-                                    : 'Tidak ada permintaan yang dibatalkan',
+                                    ? 'Belum ada riwayat pekerjaan selesai'
+                                    : 'Tidak ada tiket yang dibatalkan',
                             style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
                         ],
@@ -565,7 +508,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     itemBuilder: (ctx, i) {
                       final job = displayedJobs[i];
 
-                      // Dismissible geser ke kiri untuk menghapus riwayat
                       return Dismissible(
                         key: Key('job_item_${job.id}'),
                         direction: DismissDirection.endToStart,
@@ -575,6 +517,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             final repo = ref.read(jobRepositoryProvider);
                             await repo.deleteJob(job.id);
                             ref.invalidate(customerJobsProvider);
+                            ref.invalidate(tukangJobsProvider);
+                            ref.invalidate(tukangAllJobsProvider);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -602,21 +546,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text(
-                                'Hapus Permintaan',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
+                              Text('Hapus Permintaan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                               SizedBox(width: 8),
                               Icon(Icons.delete, color: Colors.white),
                             ],
                           ),
                         ),
                         child: Card(
+                          elevation: 0,
                           margin: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: const BorderSide(color: AppColors.border),
+                          ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
                             onTap: () => context.push('/jobs/${job.id}'),
@@ -630,34 +572,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       color: AppColors.primary.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Icon(
-                                      Icons.assignment_outlined,
-                                      color: AppColors.primary,
-                                      size: 20,
-                                    ),
+                                    child: const Icon(Icons.assignment_outlined, color: AppColors.primary, size: 20),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          job.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
+                                        Text(job.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                                         const SizedBox(height: 2),
-                                        Text(
-                                          job.categoryName ?? 'Jasa Rumah',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                        ),
+                                        Text(job.categoryName ?? 'Jasa Rumah', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                       ],
                                     ),
                                   ),
@@ -675,16 +599,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                 const SizedBox(height: 28),
 
-                // Tombol Keluar dari Akun di Bagian Bawah
+                // 7. TOMBOL KELUAR DARI AKUN
                 OutlinedButton.icon(
                   icon: const Icon(Icons.logout, color: AppColors.error),
-                  label: const Text(
-                    'Keluar dari Akun',
-                    style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
-                  ),
+                  label: const Text('Keluar dari Akun', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.error),
                     minimumSize: const Size(double.infinity, 46),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () => _confirmLogout(context, ref),
                 ),
@@ -704,14 +626,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -743,45 +658,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.displayName,
-        style: TextStyle(
-          color: fg,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+      child: Text(status.displayName, style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color iconColor) {
-    return Row(
+  Widget _buildStatColumn(String label, String value, IconData icon, Color color) {
+    return Column(
       children: [
-        Icon(icon, color: iconColor, size: 28),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 4),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           ],
         ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
       ],
     );
   }

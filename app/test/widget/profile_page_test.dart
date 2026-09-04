@@ -99,7 +99,7 @@ void main() {
 
     expect(find.text('Agus Customer dan Tukang'), findsOneWidget);
     expect(find.byKey(const Key('switch_role_button')), findsOneWidget);
-    expect(find.text('Beralih ke Mode Tukang'), findsOneWidget);
+    expect(find.text('Ganti'), findsOneWidget);
     expect(find.text('Daftar Jadi Tukang Sekarang'), findsNothing);
   });
 
@@ -142,7 +142,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit Profil'), findsOneWidget);
+    expect(find.text('Edit Profil & Foto'), findsOneWidget);
     expect(find.text('History Permintaan Saya'), findsOneWidget);
     expect(find.text('Perbaikan Kipas Angin'), findsOneWidget);
     expect(find.byType(Dismissible), findsOneWidget);
