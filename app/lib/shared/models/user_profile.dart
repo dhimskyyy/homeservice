@@ -162,6 +162,7 @@ class TukangProfile {
   final List<String> serviceTypeIds;
   final List<PaymentMethod> paymentMethods;
   final Map<String, dynamic> paymentDetails;
+  final int serviceRadiusKm;
   final double ratingAvg;
   final int jobCount;
   final DateTime createdAt;
@@ -173,6 +174,7 @@ class TukangProfile {
     required this.serviceTypeIds,
     required this.paymentMethods,
     this.paymentDetails = const {},
+    this.serviceRadiusKm = 50,
     required this.ratingAvg,
     required this.jobCount,
     required this.createdAt,
@@ -202,6 +204,7 @@ class TukangProfile {
       serviceTypeIds: serviceIds,
       paymentMethods: methods,
       paymentDetails: details,
+      serviceRadiusKm: json['service_radius_km'] as int? ?? 50,
       ratingAvg: (json['rating_avg'] as num?)?.toDouble() ?? 0.0,
       jobCount: json['job_count'] as int? ?? 0,
       createdAt: json['created_at'] != null
@@ -220,6 +223,7 @@ class TukangProfile {
       'service_type_ids': serviceTypeIds,
       'payment_methods': paymentMethods.map((m) => m.toDbValue()).toList(),
       'payment_details': paymentDetails,
+      'service_radius_km': serviceRadiusKm,
       'rating_avg': ratingAvg,
       'job_count': jobCount,
       'created_at': createdAt.toIso8601String(),

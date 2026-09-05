@@ -9,6 +9,7 @@ import '../shared/models/user_profile.dart';
 import 'edit_payment_dialog.dart';
 import 'edit_profile_dialog.dart';
 import 'profile_provider.dart';
+import 'service_radius_editor.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -235,7 +236,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       if (profile.isCustomer)
                                         _buildRoleBadge('Customer', Colors.blue.shade700),
                                       if (profile.isTukang)
-                                        _buildRoleBadge('Mitra Tukang', AppColors.secondary),
+                                        _buildRoleBadge('Tukang', AppColors.secondary),
                                       if (profile.isAdmin)
                                         _buildRoleBadge('Admin', Colors.purple.shade700),
                                     ],
@@ -329,7 +330,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ],
 
-                // 4. KARTU DETAIL TUKANG (Keahlian, Metode Pembayaran & Status Online)
+                // 4. KARTU DETAIL TUKANG (Radius, Keahlian, Metode Pembayaran & Status Online)
                 if (profile.isTukang && tukang != null) ...[
                   const SizedBox(height: 12),
                   Card(
@@ -355,14 +356,50 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ],
                           ),
                           Text(
-                            profile.isOnline ? 'Siap menerima pesanan di radius 50 km' : 'Sedang offline / tidak menerima pesanan',
+                            profile.isOnline ? 'Siap menerima pesanan' : 'Sedang offline / tidak menerima pesanan',
                             style: TextStyle(fontSize: 11, color: profile.isOnline ? AppColors.success : AppColors.textSecondary),
                           ),
                           const Divider(height: 20),
-                          const Text('Bio / Keahlian:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 2),
-                          Text(tukang.bio.isNotEmpty ? tukang.bio : 'Belum ada bio keahlian.', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          const SizedBox(height: 12),
+
+                          // Radius & Kategori Keahlian (Klik untuk atur)
+                          InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => ServiceRadiusEditor.show(context, tukang),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.radar, color: AppColors.primary, size: 22),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          tukang.serviceRadiusKm > 0
+                                              ? 'Radius Jangkauan: ${tukang.serviceRadiusKm} km'
+                                              : 'Radius Jangkauan: Nonaktif',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                        Text(
+                                          '${_countMyCategories(tukang)} kategori keahlian aktif • Ketuk untuk atur',
+                                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -412,7 +449,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             children: [
                               const Icon(Icons.handyman, color: AppColors.secondary, size: 22),
                               const SizedBox(width: 8),
-                              Text('Ingin Menjadi Mitra Tukang?', style: theme.textTheme.titleSmall?.copyWith(color: AppColors.secondary, fontWeight: FontWeight.bold)),
+                              Text('Ingin Menjadi Tukang?', style: theme.textTheme.titleSmall?.copyWith(color: AppColors.secondary, fontWeight: FontWeight.bold)),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -616,6 +653,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
       ),
     );
+  }
+
+  int _countMyCategories(TukangProfile tukang) {
+    return tukang.serviceTypeIds.length;
   }
 
   Widget _buildRoleBadge(String label, Color color) {

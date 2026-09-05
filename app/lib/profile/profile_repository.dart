@@ -121,4 +121,18 @@ class ProfileRepository {
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('profile_id', profileId);
   }
+
+  Future<void> updateTukangServices({
+    required String profileId,
+    required int serviceRadiusKm,
+    required List<String> serviceTypeIds,
+  }) async {
+    final c = client;
+    if (c == null) return;
+    await c.from('tukang_profiles').update({
+      'service_radius_km': serviceRadiusKm.clamp(0, 100),
+      'service_type_ids': serviceTypeIds,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('profile_id', profileId);
+  }
 }

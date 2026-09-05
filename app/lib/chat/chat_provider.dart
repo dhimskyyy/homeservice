@@ -194,9 +194,29 @@ class ChatRoomNotifier extends StateNotifier<ChatRoomState> {
 
   @override
   void dispose() {
-    _msgChannel?.unsubscribe();
-    _agreementChannel?.unsubscribe();
+    _disposeChannels();
     super.dispose();
+  }
+
+  void _disposeChannels() {
+    final msgCh = _msgChannel;
+    final agrCh = _agreementChannel;
+    _msgChannel = null;
+    _agreementChannel = null;
+
+    // Fire-and-forget async cleanup (dispose tidak boleh async)
+    Future(() async {
+      try {
+        await msgCh?.unsubscribe();
+        await agrCh?.unsubscribe();
+        // removeChannel menghapus dari client supaya tidak leak
+        final client = chatRepo.client;
+        if (client != null) {
+          if (msgCh != null) await client.removeChannel(msgCh);
+          if (agrCh != null) await client.removeChannel(agrCh);
+        }
+      } catch (_) {}
+    });
   }
 }
 

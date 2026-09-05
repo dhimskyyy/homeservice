@@ -7,6 +7,7 @@ import {
   MapPin,
   Calendar,
   Receipt,
+  MessageCircle,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -36,20 +37,40 @@ export default async function JobDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  // 2. Fetch Applications & Agreements
-  const [appsRes, agreementsRes] = await Promise.all([
+  // 2. Fetch Applications, Agreements, dan Chat (audit sengketa)
+  const [appsRes, agreementsRes, chatRes] = await Promise.all([
     supabase
       .from('job_applications')
-      .select('*, profiles:provider_id(full_name, email, phone), tukang_profiles!provider_id(bio, rating_avg)')
+      .select(`
+        *,
+        profiles:provider_id (
+          full_name, email, phone,
+          tukang_profiles (bio, rating_avg)
+        )
+      `)
       .eq('job_id', id),
     supabase
       .from('price_agreements')
       .select('*, profiles:provider_id(full_name)')
       .eq('job_id', id),
+    supabase
+      .from('messages')
+      .select('*, profiles:sender_id(full_name)')
+      .eq('job_id', id)
+      .order('created_at', { ascending: true })
+      .limit(100),
   ])
 
   const applications = appsRes.data ?? []
   const agreements = agreementsRes.data ?? []
+  const chatMessages = (chatRes.data ?? []) as Array<{
+    id: string
+    sender_id: string
+    body: string
+    media_url: string | null
+    created_at: string
+    profiles: { full_name: string } | { full_name: string }[] | null
+  }>
 
   const categoryName = Array.isArray(job.service_categories)
     ? job.service_categories[0]?.name
@@ -268,10 +289,10 @@ export default async function JobDetailPage({ params }: PageProps) {
                       {app.profiles?.full_name || 'Mitra Tukang'}
                     </td>
                     <td className="px-4 py-3 text-amber-600 font-bold">
-                      ★ {app.tukang_profiles?.rating_avg?.toFixed(1) || '0.0'}
+                      ★ {app.profiles?.tukang_profiles?.[0]?.rating_avg?.toFixed(1) || app.profiles?.tukang_profiles?.rating_avg?.toFixed(1) || '0.0'}
                     </td>
                     <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">
-                      {app.tukang_profiles?.bio || '-'}
+                      {app.profiles?.tukang_profiles?.[0]?.bio || app.profiles?.tukang_profiles?.bio || '-'}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -292,6 +313,44 @@ export default async function JobDetailPage({ params }: PageProps) {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+      {/* Riwayat Chat (Audit Admin) */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-blue-600" />
+          <h3 className="font-bold text-sm text-slate-900 font-[family-name:var(--font-heading)]">
+            Riwayat Obrolan ({chatMessages.length} pesan)
+          </h3>
+        </div>
+        <div className="p-5 space-y-3 max-h-[400px] overflow-y-auto">
+          {chatMessages.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-4">
+              Belum ada percakapan pada tiket ini
+            </p>
+          ) : (
+            chatMessages.map((m) => {
+              const senderName = Array.isArray(m.profiles)
+                ? m.profiles[0]?.full_name
+                : m.profiles?.full_name
+              return (
+                <div key={m.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-800">
+                      {senderName || 'Pengguna'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{formatDate(m.created_at)}</span>
+                  </div>
+                  <p className="text-xs text-slate-700 whitespace-pre-wrap">{m.body}</p>
+                  {m.media_url && (
+                    <p className="text-[10px] text-blue-600 mt-1 break-all">
+                      Lampiran: {m.media_url}
+                    </p>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
     </div>

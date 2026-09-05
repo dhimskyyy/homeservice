@@ -35,6 +35,7 @@ export default async function UserDetailPage({ params }: PageProps) {
         bio,
         rating_avg,
         job_count,
+        service_radius_km,
         service_type_ids,
         payment_methods,
         payment_details
@@ -237,6 +238,14 @@ export default async function UserDetailPage({ params }: PageProps) {
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>Pekerjaan Selesai (Job Count):</span>
             <span className="font-bold text-slate-900">{tukangData?.job_count ?? 0} Pekerjaan</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>Radius Jangkauan Pesanan:</span>
+            <span className="font-bold text-slate-900">
+              {(tukangData?.service_radius_km ?? 0) > 0
+                ? `${tukangData.service_radius_km} km`
+                : 'Nonaktif'}
+            </span>
           </div>
         </div>
 

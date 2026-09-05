@@ -38,20 +38,21 @@ class JobRepository {
 
   Future<List<Job>> getCustomerJobs(String customerId) async {
     final c = client;
-    if (c == null) return [];
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
     final data = await c
         .from('jobs')
         .select('*, service_categories(name)')
         .eq('customer_id', customerId)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(100);
 
     return (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<Job>> getOpenJobs({String? excludeProviderId}) async {
     final c = client;
-    if (c == null) return [];
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
     List<String> appliedJobIds = [];
     if (excludeProviderId != null) {
@@ -67,7 +68,7 @@ class JobRepository {
         .select('*, service_categories(name)')
         .eq('status', 'open');
 
-    final data = await query.order('created_at', ascending: false);
+    final data = await query.order('created_at', ascending: false).limit(50);
     var jobs = (data as List).map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
 
     // Saring agar job yang sudah di-respond tukang tidak muncul lagi di feed sekitar
@@ -80,7 +81,7 @@ class JobRepository {
 
   Future<List<Job>> getTukangJobs(String providerId, {bool onlyActive = true}) async {
     final c = client;
-    if (c == null) return [];
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
     // 1. Ambil job ID yang pernah di-apply tukang ini
     final apps = await c
@@ -98,13 +99,15 @@ class JobRepository {
           .from('jobs')
           .select('*, service_categories(name)')
           .eq('selected_provider_id', providerId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .limit(100);
     } else {
       data = await c
           .from('jobs')
           .select('*, service_categories(name)')
           .or('selected_provider_id.eq.$providerId,id.in.(${appliedJobIds.join(",")})')
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .limit(100);
     }
 
     var jobs = data.map((j) => Job.fromJson(j as Map<String, dynamic>)).toList();
@@ -138,7 +141,7 @@ class JobRepository {
 
   Future<List<JobApplication>> getJobApplications(String jobId) async {
     final c = client;
-    if (c == null) return [];
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
     final data = await c
         .from('job_applications')
@@ -223,17 +226,10 @@ class JobRepository {
     final c = client;
     if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
-    // 1. Update status nota menjadi 'paid'
-    await c.from('price_agreements').update({
-      'status': 'paid',
-      'paid_at': DateTime.now().toIso8601String(),
-    }).eq('id', agreementId);
-
-    // 2. Update status job menjadi 'paid' (transisi done -> paid di-guard trigger jobs_status_guard)
-    await c.from('jobs').update({
-      'status': 'paid',
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', jobId);
+    // RPC atomic: nota pending->paid + job done->paid dalam 1 transaksi
+    await c.rpc('approve_payment_provider', params: {
+      'p_agreement_id': agreementId,
+    });
   }
 
   Future<void> cancelJob(String jobId) async {

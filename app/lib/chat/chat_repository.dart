@@ -10,13 +10,14 @@ class ChatRepository {
 
   Future<List<ChatMessage>> getMessages(String jobId) async {
     final c = client;
-    if (c == null) return [];
+    if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
     final data = await c
         .from('messages')
         .select('*, profiles:sender_id(full_name)')
         .eq('job_id', jobId)
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: true)
+        .limit(200);
 
     return (data as List).map((m) => ChatMessage.fromJson(m as Map<String, dynamic>)).toList();
   }

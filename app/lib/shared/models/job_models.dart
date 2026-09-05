@@ -570,6 +570,26 @@ class AppNotificationItem {
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  AppNotificationItem copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? jobId,
+    String? body,
+    bool? read,
+    DateTime? createdAt,
+  }) {
+    return AppNotificationItem(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      jobId: jobId ?? this.jobId,
+      body: body ?? this.body,
+      read: read ?? this.read,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 class LocationPoint {

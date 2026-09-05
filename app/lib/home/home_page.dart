@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_provider.dart';
 import '../auth/role_selection_dialog.dart';
+import '../core/geo_service.dart';
 import '../core/theme.dart';
 import '../jobs/job_providers.dart';
 import '../jobs/tukang_active_jobs_section.dart';
 import '../jobs/tukang_job_feed.dart';
-import '../profile/edit_payment_dialog.dart';
+import '../notifications/tukang_notifications_panel.dart';
 import '../profile/profile_provider.dart';
 import '../shared/models/job_models.dart';
 import '../shared/models/user_profile.dart';
@@ -418,6 +419,15 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
               error: (e, _) => Text('Gagal memuat kategori: $e'),
               data: (categories) {
+                // Tampilkan 5 kategori utama + chip "+N Lainnya"
+                const mainCount = 5;
+                final mainCategories = categories.take(mainCount).toList();
+                final otherCount = categories.length - mainCount;
+                final hasMore = otherCount > 0;
+
+                final displayItems = List<dynamic>.from(mainCategories);
+                if (hasMore) displayItems.add('more');
+
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -427,9 +437,59 @@ class _HomePageState extends ConsumerState<HomePage> {
                     mainAxisSpacing: 12,
                     childAspectRatio: 0.9,
                   ),
-                  itemCount: categories.length,
+                  itemCount: displayItems.length,
                   itemBuilder: (ctx, i) {
-                    final cat = categories[i];
+                    final item = displayItems[i];
+
+                    // Chip "+N Lainnya"
+                    if (item == 'more') {
+                      return Card(
+                        elevation: 0,
+                        color: AppColors.primary.withValues(alpha: 0.06),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => context.push('/all-categories'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.grid_view_rounded,
+                                    color: AppColors.primary,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '+$otherCount Lainnya',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final cat = item as ServiceCategory;
                     return Card(
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -719,7 +779,26 @@ class _HomePageState extends ConsumerState<HomePage> {
                         Switch.adaptive(
                           value: isOnline,
                           activeThumbColor: AppColors.success,
-                          onChanged: (val) {
+                          onChanged: (val) async {
+                            // Saat mengaktifkan radar online, GPS wajib bisa diambil
+                            // agar radius matching (notifikasi job baru) akurat.
+                            if (val) {
+                              final pos = await GeoService.getCurrentDeviceLocation();
+                              if (pos == null) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Tidak bisa mengaktifkan radar: GPS perangkat mati atau izin lokasi ditolak. Aktifkan GPS lalu coba lagi.',
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                    duration: Duration(seconds: 4),
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                            if (!context.mounted) return;
                             ref.read(profileProvider.notifier).updateProfile(isOnline: val);
                           },
                         ),
@@ -733,7 +812,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         Expanded(
                           child: Text(
                             isOnline
-                                ? 'Radar aktif: Anda dapat menerima pesanan dalam radius 50 km'
+                                ? 'Radar aktif: radius jangkauan ${tukang?.serviceRadiusKm ?? 50} km dari posisi Anda'
                                 : 'Aktifkan sakelar di atas agar profil Anda terlihat oleh customer',
                             style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                           ),
@@ -826,42 +905,10 @@ class _HomePageState extends ConsumerState<HomePage> {
 
             const SizedBox(height: 14),
 
-            // 4. QUICK ACTION BAR TUKANG
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 38),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Icon(Icons.payment_outlined, size: 16),
-                    label: const Text('Kelola Pembayaran', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    onPressed: () {
-                      if (tukang != null) {
-                        EditPaymentDialog.show(context, tukang);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 38),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Icon(Icons.person_outline, size: 16),
-                    label: const Text('Profil & Riwayat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    onPressed: () => context.push('/profile'),
-                  ),
-                ),
-              ],
-            ),
+            // 4. NOTIFIKASI PESANAN MASUK (Realtime)
+            const TukangNotificationsPanel(),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
             // 5. BANNER TIPS OPERASIONAL TUKANG
             Container(
@@ -877,7 +924,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Tips: Selalu sepakati harga & buat nota di chat sebelum menekan tombol Mulai Bekerja.',
+                      'Tips: Atur radius jangkauan & keahlian di Profil agar mendapat pesanan yang tepat.',
                       style: TextStyle(fontSize: 11, color: Colors.blue, height: 1.3),
                     ),
                   ),

@@ -10,6 +10,7 @@ import 'chat/chat_page.dart';
 import 'core/theme.dart';
 import 'home/home_page.dart';
 import 'jobs/create_job_page.dart';
+import 'jobs/all_categories_page.dart';
 import 'jobs/job_detail_page.dart';
 import 'jobs/job_list_page.dart';
 import 'profile/become_tukang_page.dart';
@@ -89,6 +90,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/jobs',
       builder: (context, state) => const JobListPage(),
+    ),
+    GoRoute(
+      path: '/all-categories',
+      builder: (context, state) => const AllCategoriesPage(),
     ),
     GoRoute(
       path: '/jobs/:id',

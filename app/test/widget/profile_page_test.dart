@@ -178,6 +178,12 @@ class _MockProfileNotifier extends StateNotifier<ProfileState>
   }) async {}
 
   @override
+  Future<void> updateTukangServices({
+    required int serviceRadiusKm,
+    required List<String> serviceTypeIds,
+  }) async {}
+
+  @override
   Future<void> loadProfile(String userId) async {}
 
   @override

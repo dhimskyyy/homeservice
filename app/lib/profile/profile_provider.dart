@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_provider.dart';
+import '../core/geo_service.dart';
 import '../core/supabase_client.dart';
 import '../shared/models/user_profile.dart';
 import 'profile_repository.dart';
@@ -166,6 +167,27 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     }
   }
 
+  Future<void> updateTukangServices({
+    required int serviceRadiusKm,
+    required List<String> serviceTypeIds,
+  }) async {
+    final userId = state.profile?.id;
+    if (userId == null) return;
+
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _repo.updateTukangServices(
+        profileId: userId,
+        serviceRadiusKm: serviceRadiusKm,
+        serviceTypeIds: serviceTypeIds,
+      );
+      await loadProfile(userId);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
   Future<void> updateProfile({
     String? fullName,
     String? phone,
@@ -177,12 +199,28 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
+      // Saat tukang aktifkan status online, ambil GPS terkini dan simpan
+      // ke profiles.lat/lng agar radius matching (notifikasi job baru) akurat.
+      double? lat;
+      double? lng;
+      if (isOnline == true && state.profile?.isTukang == true) {
+        try {
+          final pos = await GeoService.getCurrentDeviceLocation();
+          if (pos != null) {
+            lat = pos.latitude;
+            lng = pos.longitude;
+          }
+        } catch (_) {}
+      }
+
       await _repo.updateProfile(
         userId: userId,
         fullName: fullName,
         phone: phone,
         avatarUrl: avatarUrl,
         isOnline: isOnline,
+        lat: lat,
+        lng: lng,
       );
       await loadProfile(userId);
     } catch (e) {

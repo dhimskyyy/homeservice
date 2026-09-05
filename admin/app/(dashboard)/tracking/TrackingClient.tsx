@@ -99,7 +99,7 @@ export function TrackingClient({ initialTukangs }: TrackingClientProps) {
       const [profilesRes, jobsRes, locsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, full_name, email, avatar_url, is_online, is_suspended, lat, lng')
+          .select('id, full_name, email, avatar_url, is_online, is_suspended')
           .eq('is_tukang', true)
           .order('is_online', { ascending: false }),
         supabase.from('jobs').select('id, title, selected_provider_id, lat, lng').eq('status', 'in_progress'),
@@ -128,12 +128,12 @@ export function TrackingClient({ initialTukangs }: TrackingClientProps) {
           status: s,
           job_id: activeJob?.id,
           job_title: activeJob?.title,
-          lat: gps?.lat ?? activeJob?.lat ?? t.lat ?? -6.1754,
-          lng: gps?.lng ?? activeJob?.lng ?? t.lng ?? 106.8272,
+          lat: gps?.lat ?? activeJob?.lat ?? 0,
+          lng: gps?.lng ?? activeJob?.lng ?? 0,
         }
       })
 
-      setTukangs(mapped)
+      setTukangs(mapped.filter((t) => !(t.lat === 0 && t.lng === 0)))
     } finally {
       setIsRefreshing(false)
     }

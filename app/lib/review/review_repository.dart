@@ -28,7 +28,8 @@ class ReviewRepository {
         .from('reviews')
         .select('*, profiles:customer_id(full_name)')
         .eq('provider_id', providerId)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(50);
 
     return (data as List).map((r) => Review.fromJson(r as Map<String, dynamic>)).toList();
   }

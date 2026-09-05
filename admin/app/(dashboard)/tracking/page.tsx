@@ -2,6 +2,20 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { TrackingClient } from './TrackingClient'
 
+interface TukangRow {
+  id: string
+  full_name: string
+  email: string
+  avatar_url: string | null
+  is_online: boolean
+  is_suspended: boolean
+  status: 'working' | 'online' | 'offline'
+  job_id?: string
+  job_title?: string
+  lat: number
+  lng: number
+}
+
 export default async function TrackingPage() {
   const supabase = await createClient()
 
@@ -14,9 +28,7 @@ export default async function TrackingPage() {
       email,
       avatar_url,
       is_online,
-      is_suspended,
-      lat,
-      lng
+      is_suspended
     `)
     .eq('is_tukang', true)
     .order('is_online', { ascending: false })
@@ -43,7 +55,7 @@ export default async function TrackingPage() {
   })
 
   // Format data tukang terpadu
-  const allTukangs = (tukangProfiles ?? []).map((t) => {
+  const allTukangs = (tukangProfiles ?? []).map((t): TukangRow | null => {
     const activeJob = (inProgressJobs ?? []).find(
       (j) => j.selected_provider_id === t.id
     )
@@ -62,8 +74,11 @@ export default async function TrackingPage() {
 
     // Koordinat: utamakan GPS realtime terbaru, lalu job lokasi, lalu home koordinat tukang
     const gps = latestGpsByProvider[t.id]
-    const effectiveLat = gps?.lat ?? activeJob?.lat ?? t.lat ?? -6.1754
-    const effectiveLng = gps?.lng ?? activeJob?.lng ?? t.lng ?? 106.8272
+    const effectiveLat = gps?.lat ?? activeJob?.lat ?? 0
+    const effectiveLng = gps?.lng ?? activeJob?.lng ?? 0
+
+    // Skip tukang yang belum pernah mengirim GPS & tidak sedang di lokasi job
+    if (effectiveLat === 0 && effectiveLng === 0) return null
 
     return {
       id: t.id,
@@ -78,7 +93,7 @@ export default async function TrackingPage() {
       lat: effectiveLat,
       lng: effectiveLng,
     }
-  })
+  }).filter((t): t is TukangRow => t !== null)
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

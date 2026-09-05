@@ -75,10 +75,15 @@ end;
 $$;
 
 -- Perbaiki akun tukang yang baru mendaftar agar is_customer = false (hanya 1 role tukang)
+-- CATATAN: data-fix email personal dihapus dari repo (PII). Untuk data produksi,
+-- gunakan SQL Editor secara manual bila diperlukan.
 update public.profiles
    set is_customer = false
  where is_tukang = true
-   and email in ('dhmsafrzl@gmail.com', 'mdhimas25@gmail.com');
+   and is_customer = true
+   and not exists (
+     select 1 from public.tukang_profiles tp where tp.profile_id = profiles.id
+   );
 
 -- 2. Tambah kolom media_url dan status read di tabel messages
 alter table public.messages

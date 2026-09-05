@@ -79,7 +79,9 @@ begin
 end;
 $$;
 
--- Langsung aktifkan role tukang untuk akun Anda yang sudah terdaftar
+-- Data-fix akun tukang lama (tanpa PII):
+-- Akun yang terdaftar sebagai tukang via trigger lama (is_customer=true, is_tukang=true)
+-- dinormalisasi agar konsisten.
 do $$
 declare
   v_rec record;
@@ -89,12 +91,10 @@ begin
 
   for v_rec in (
     select id from public.profiles
-    where email in ('dhmsafrzl@gmail.com', 'mdhimas25@gmail.com')
+    where is_tukang = true
+      and not exists (select 1 from public.tukang_profiles tp where tp.profile_id = profiles.id)
+      limit 5
   ) loop
-    update public.profiles
-       set is_tukang = true, is_online = true
-     where id = v_rec.id;
-
     insert into public.tukang_profiles (
       profile_id, bio, service_type_ids, payment_methods, payment_details
     ) values (
