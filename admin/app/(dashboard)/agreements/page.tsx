@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatRupiah, formatDate } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
+
 interface AgreementRecord {
   id: string
   amount: number

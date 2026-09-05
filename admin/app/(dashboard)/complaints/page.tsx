@@ -2,6 +2,9 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ComplaintsClient } from './ComplaintsClient'
 
+export const dynamic = 'force-dynamic'
+
+
 export default async function ComplaintsPage() {
   const supabase = await createClient()
 

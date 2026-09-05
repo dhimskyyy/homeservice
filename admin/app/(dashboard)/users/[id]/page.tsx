@@ -18,6 +18,9 @@ import { createClient } from '@/lib/supabase/server'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatDate } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
+
 interface PageProps {
   params: Promise<{ id: string }>
 }

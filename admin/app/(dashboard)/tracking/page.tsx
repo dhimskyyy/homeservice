@@ -2,6 +2,9 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { TrackingClient } from './TrackingClient'
 
+export const dynamic = 'force-dynamic'
+
+
 interface TukangRow {
   id: string
   full_name: string

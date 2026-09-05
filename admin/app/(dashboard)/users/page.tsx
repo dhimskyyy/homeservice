@@ -2,6 +2,9 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { UsersClient } from './UsersClient'
 
+export const dynamic = 'force-dynamic'
+
+
 export default async function UsersPage() {
   const supabase = await createClient()
 
