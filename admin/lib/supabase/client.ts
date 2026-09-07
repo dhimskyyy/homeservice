@@ -6,7 +6,7 @@ function getSupabaseConfig() {
 
   if (!url || !anonKey) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY wajib diset di .env.local'
+      'Konfigurasi Supabase tidak ditemukan. Pastikan NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY terisi (lokal: file admin/.env.local; Vercel: Settings → Environment Variables + redeploy).'
     )
   }
   return { url, anonKey }
