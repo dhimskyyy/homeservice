@@ -7,6 +7,7 @@ import 'auth/login_page.dart';
 import 'auth/register_page.dart';
 import 'auth/verify_email_page.dart';
 import 'chat/chat_page.dart';
+import 'core/fcm_service.dart';
 import 'core/theme.dart';
 import 'home/home_page.dart';
 import 'jobs/create_job_page.dart';
@@ -35,6 +36,9 @@ void main() async {
       publishableKey: supabaseAnonKey,
     );
   }
+
+  // Inisialisasi Firebase Cloud Messaging
+  await FcmService.initialize();
 
   runApp(const ProviderScope(child: MyApp()));
 }

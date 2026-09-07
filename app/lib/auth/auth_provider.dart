@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/fcm_service.dart';
 import '../core/supabase_client.dart';
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthUiState>((ref) {
@@ -61,6 +62,7 @@ class AuthNotifier extends StateNotifier<AuthUiState> {
       final session = data.session;
       if (session != null) {
         state = state.copyWith(user: session.user, error: null);
+        FcmService.registerDeviceToken(session.user.id, c);
       } else {
         state = state.copyWith(user: null, message: null);
       }
@@ -69,6 +71,7 @@ class AuthNotifier extends StateNotifier<AuthUiState> {
     final session = c.auth.currentSession;
     if (session != null) {
       state = state.copyWith(user: session.user);
+      FcmService.registerDeviceToken(session.user.id, c);
     }
   }
 
@@ -165,6 +168,10 @@ class AuthNotifier extends StateNotifier<AuthUiState> {
     }
     state = state.copyWith(isLoading: true, error: null);
     try {
+      final user = state.user;
+      if (user != null) {
+        await FcmService.removeDeviceToken(user.id, c);
+      }
       await c.auth.signOut();
       state = const AuthUiState();
     } catch (e) {
