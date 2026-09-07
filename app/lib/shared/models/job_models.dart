@@ -391,6 +391,7 @@ class PriceAgreement {
   final PaymentMethod paymentMethod;
   final PaymentStatus status;
   final bool voided;
+  final String? paymentProofUrl;
   final DateTime createdAt;
   final DateTime? paidAt;
   final String? providerName;
@@ -404,6 +405,7 @@ class PriceAgreement {
     required this.paymentMethod,
     required this.status,
     required this.voided,
+    this.paymentProofUrl,
     required this.createdAt,
     this.paidAt,
     this.providerName,
@@ -419,6 +421,7 @@ class PriceAgreement {
       paymentMethod: PaymentMethod.fromDbValue(json['payment_method'] as String? ?? 'cash'),
       status: PaymentStatus.fromDbValue(json['status'] as String? ?? 'pending'),
       voided: json['voided'] as bool? ?? false,
+      paymentProofUrl: json['payment_proof_url'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -441,6 +444,7 @@ class PriceAgreement {
       'payment_method': paymentMethod.toDbValue(),
       'status': status.toDbValue(),
       'voided': voided,
+      'payment_proof_url': paymentProofUrl,
       'created_at': createdAt.toIso8601String(),
       'paid_at': paidAt?.toIso8601String(),
     };

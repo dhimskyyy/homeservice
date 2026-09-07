@@ -236,4 +236,14 @@ class _MockAgreementRepository implements AgreementRepository {
   }) {
     return null;
   }
+
+  @override
+  Future<String> uploadPaymentProof({
+    required String agreementId,
+    required String jobId,
+    required String fileName,
+    required dynamic bytes,
+  }) async {
+    return 'https://example.com/proof.jpg';
+  }
 }

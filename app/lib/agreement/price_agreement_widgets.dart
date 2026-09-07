@@ -120,6 +120,34 @@ class PriceAgreementCard extends StatelessWidget {
                 ),
               ),
             ],
+            if (agreement.paymentProofUrl != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text(
+                        'Bukti transfer telah dilampirkan',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.image, size: 16, color: AppColors.primary),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

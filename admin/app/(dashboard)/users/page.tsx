@@ -1,14 +1,30 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { UsersClient } from './UsersClient'
+import { Pagination } from '@/components/ui/Pagination'
 
 export const dynamic = 'force-dynamic'
 
+interface PageProps {
+  searchParams: Promise<{ page?: string; tab?: string; q?: string }>
+}
 
-export default async function UsersPage() {
+const PAGE_SIZE = 15
+
+export default async function UsersPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const currentPage = Math.max(1, parseInt(params.page || '1', 10))
+  const from = (currentPage - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
   const supabase = await createClient()
 
-  // Fetch all profiles
+  // Count total profiles
+  const { count: totalUsers } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+
+  // Fetch paginated profiles
   const { data: users, error } = await supabase
     .from('profiles')
     .select(`
@@ -29,6 +45,7 @@ export default async function UsersPage() {
       )
     `)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (error) {
     return (
@@ -37,6 +54,9 @@ export default async function UsersPage() {
       </div>
     )
   }
+
+  const total = totalUsers ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -49,7 +69,17 @@ export default async function UsersPage() {
         </p>
       </div>
 
-      <UsersClient initialUsers={users || []} />
+      <div className="space-y-4">
+        <UsersClient initialUsers={users || []} />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          baseUrl="/users"
+          searchParams={{ page: params.page }}
+        />
+      </div>
     </div>
   )
 }

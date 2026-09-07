@@ -49,6 +49,31 @@ class AgreementRepository {
     return PriceAgreement.fromJson(data);
   }
 
+  Future<String> uploadPaymentProof({
+    required String agreementId,
+    required String jobId,
+    required String fileName,
+    required dynamic bytes,
+  }) async {
+    final c = client;
+    if (c == null) throw Exception('Supabase client tidak diinisialisasi');
+
+    final path = '$jobId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    await c.storage.from('payments').uploadBinary(
+      path,
+      bytes,
+      fileOptions: const FileOptions(upsert: true),
+    );
+
+    final publicUrl = c.storage.from('payments').getPublicUrl(path);
+
+    await c.from('price_agreements').update({
+      'payment_proof_url': publicUrl,
+    }).eq('id', agreementId);
+
+    return publicUrl;
+  }
+
   RealtimeChannel? subscribeToAgreements({
     required String jobId,
     required void Function() onUpdate,

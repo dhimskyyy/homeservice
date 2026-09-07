@@ -100,6 +100,50 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _handleUploadPaymentProof(String agreementId) async {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+        maxWidth: 1200,
+      );
+
+      if (picked == null) return;
+
+      setState(() => _isSending = true);
+      final bytes = await picked.readAsBytes();
+
+      await ref.read(chatRoomProvider(widget.jobId).notifier).uploadPaymentProof(
+            agreementId: agreementId,
+            senderId: user.id,
+            fileName: picked.name,
+            bytes: bytes,
+          );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bukti transfer pembayaran berhasil diunggah!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengunggah bukti transfer: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -297,7 +341,40 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: chatState.agreements.map((a) {
-                    return PriceAgreementCard(agreement: a);
+                    final isCustomer = user?.id == a.customerId;
+                    final canUploadProof = isCustomer &&
+                        a.status == PaymentStatus.pending &&
+                        !a.voided;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        PriceAgreementCard(agreement: a),
+                        if (canUploadProof) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.upload_file, size: 16),
+                              label: Text(
+                                a.paymentProofUrl != null
+                                    ? 'Ganti Bukti Transfer'
+                                    : 'Upload Bukti Transfer',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(color: AppColors.primary),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: () => _handleUploadPaymentProof(a.id),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                        ],
+                      ],
+                    );
                   }).toList(),
                 ),
               )

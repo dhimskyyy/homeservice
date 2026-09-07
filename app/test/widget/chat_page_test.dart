@@ -138,6 +138,16 @@ class _MockChatRoomNotifier extends StateNotifier<ChatRoomState>
     required int amount,
     required PaymentMethod paymentMethod,
   }) async {}
+
+  @override
+  Future<String> uploadPaymentProof({
+    required String agreementId,
+    required String senderId,
+    required String fileName,
+    required dynamic bytes,
+  }) async {
+    return 'https://example.com/payment.jpg';
+  }
 }
 
 class _MockAuthNotifier extends StateNotifier<AuthUiState> implements AuthNotifier {

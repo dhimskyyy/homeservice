@@ -192,6 +192,36 @@ class ChatRoomNotifier extends StateNotifier<ChatRoomState> {
     }
   }
 
+  Future<String> uploadPaymentProof({
+    required String agreementId,
+    required String senderId,
+    required String fileName,
+    required Uint8List bytes,
+  }) async {
+    try {
+      final url = await agreementRepo.uploadPaymentProof(
+        agreementId: agreementId,
+        jobId: jobId,
+        fileName: fileName,
+        bytes: bytes,
+      );
+
+      // Otomatis kirim notifikasi pesan di chat room beserta link bukti
+      await sendMessage(
+        senderId: senderId,
+        body: 'Bukti transfer pembayaran berhasil diunggah.',
+        mediaUrl: url,
+      );
+
+      final updated = await agreementRepo.getAgreements(jobId);
+      state = state.copyWith(agreements: updated);
+      return url;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
   @override
   void dispose() {
     _disposeChannels();

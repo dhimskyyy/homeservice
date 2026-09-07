@@ -54,6 +54,27 @@ class JobRepository {
     final c = client;
     if (c == null) throw Exception('Supabase client belum diinisialisasi');
 
+    // Coba gunakan RPC cerdas berbasis PostGIS radius & spesialisasi kategori
+    if (excludeProviderId != null) {
+      try {
+        final rpcData = await c.rpc(
+          'get_open_jobs_for_tukang',
+          params: {'p_provider_id': excludeProviderId},
+        );
+        if (rpcData is List) {
+          return rpcData.map((j) {
+            final map = Map<String, dynamic>.from(j as Map);
+            if (map['category_name'] != null) {
+              map['service_categories'] = {'name': map['category_name']};
+            }
+            return Job.fromJson(map);
+          }).toList();
+        }
+      } catch (_) {
+        // Fallback ke query manual jika RPC belum termigrasi
+      }
+    }
+
     List<String> appliedJobIds = [];
     if (excludeProviderId != null) {
       final apps = await c
