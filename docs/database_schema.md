@@ -1123,6 +1123,10 @@ Bagian §1–§10 di atas mencerminkan **status akhir** setelah seluruh migratio
 | `20260903000018_notifications_rls_hardening` | Trigger notifikasi ×3; `find_providers_nearby` DEFINER; revoke kolom `lat/lng`; purge 200 titik; guard nota; `locked_out` keluar chat; review/komplain wajib terpilih; storage path check |
 | `20260903000019_fix_rls_and_atomicity` | `admin_set_suspended` + `jobs_lock_applications` DEFINER; RPC `approve_payment_provider`; guard update chat; admin-read notifikasi; delete `paid` dilarang |
 | `20260903000020_feed_radius_and_payments` | Storage bucket `payments`; kolom `payment_proof_url`; RPC `get_open_jobs_for_tukang` (PostGIS radius + kategori keahlian) |
+| `20260903000021_fcm_tokens` | Tabel `user_fcm_tokens` + RLS untuk manajemen push notification FCM |
+| `20260903000022_push_webhook` | Trigger placeholder push notification webhook |
+| `20260903000023_enable_pg_net_and_schema` | Ekstensi `pg_net` & schema `supabase_functions` |
+| `20260903000024_supabase_functions_http_request` | Fungsi `supabase_functions.http_request()` untuk trigger Edge Function via Database Webhook |
 
 ### Waiver SECURITY DEFINER di schema `public` (pengecualian atas `agents.md` §3)
 
