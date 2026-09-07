@@ -859,19 +859,79 @@ class _JobDetailPageState extends ConsumerState<JobDetailPage> {
             if (job.status == JobStatus.done) ...[
               if (isCustomer) ...[
                 const Text(
-                  'Silakan lakukan pembayaran langsung ke tukang (tunai/transfer/e-wallet). Tukang akan menyetujui status lunas setelah dana diterima.',
+                  'Silakan lakukan pembayaran langsung ke tukang (tunai/transfer/e-wallet). Anda dapat melampirkan bukti transfer di chat agar tukang segera mengonfirmasi pelunasan.',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
+                if (activeAgreement.paymentProofUrl != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade300),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Bukti transfer telah Anda lampirkan',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
-                  icon: const Icon(Icons.check),
-                  label: const Text('Beri Tahu Tukang Saya Sudah Bayar'),
+                  icon: const Icon(Icons.receipt_long),
+                  label: Text(activeAgreement.paymentProofUrl != null
+                      ? 'Buka Chat & Lihat Bukti'
+                      : 'Buka Chat & Upload Bukti Transfer'),
                   onPressed: () {
                     context.push('/chat?jobId=${job.id}');
                   },
                 ),
               ],
               if (isSelectedProvider) ...[
+                if (activeAgreement.paymentProofUrl != null) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.image, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            'Customer telah mengunggah bukti transfer',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.push('/chat?jobId=${job.id}'),
+                          child: const Text('Lihat Bukti', style: TextStyle(fontSize: 11)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const Text(
                   'Periksa apakah Anda telah menerima pembayaran dari customer.',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
