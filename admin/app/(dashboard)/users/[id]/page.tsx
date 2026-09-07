@@ -30,10 +30,23 @@ export default async function UserDetailPage({ params }: PageProps) {
   const supabase = await createClient()
 
   // 1. Fetch Profile Tukang
+  // Catatan: kolom lat/lng TIDAK di-select (dicabut dari API via column grant).
+  // select * akan gagal total di PostgREST bila ada kolom tanpa izin.
   const { data: profile, error } = await supabase
     .from('profiles')
     .select(`
-      *,
+      id,
+      email,
+      full_name,
+      phone,
+      avatar_url,
+      is_customer,
+      is_tukang,
+      is_admin,
+      is_suspended,
+      is_online,
+      created_at,
+      updated_at,
       tukang_profiles (
         bio,
         rating_avg,
@@ -195,14 +208,14 @@ export default async function UserDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-6">
             <div className="text-center p-3 bg-amber-50/60 border border-amber-200/80 rounded-xl min-w-[100px]">
               <span className="text-3xl font-extrabold text-amber-900 font-[family-name:var(--font-heading)]">
-                {tukangData?.rating_avg?.toFixed(1) || '0.0'}
+                {Number(tukangData?.rating_avg ?? 0).toFixed(1)}
               </span>
               <div className="flex justify-center text-amber-400 mt-0.5">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
                     className={`w-3.5 h-3.5 ${
-                      i < Math.round(tukangData?.rating_avg || 0)
+                      i < Math.round(Number(tukangData?.rating_avg ?? 0))
                         ? 'fill-amber-400 text-amber-400'
                         : 'text-slate-200'
                     }`}
