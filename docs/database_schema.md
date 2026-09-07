@@ -217,16 +217,17 @@ alter table public.job_applications enable row level security;
 
 ```sql
 create table public.price_agreements (
-  id             uuid primary key default gen_random_uuid(),
-  job_id         uuid not null references public.jobs(id) on delete cascade,
-  customer_id    uuid not null references public.profiles(id),
-  provider_id    uuid not null references public.profiles(id),
-  amount         integer not null check (amount > 0),
-  payment_method public.payment_method not null,
-  status         public.payment_status not null default 'pending',
-  voided         boolean not null default false,
-  created_at     timestamptz not null default now(),
-  paid_at        timestamptz,
+  id                uuid primary key default gen_random_uuid(),
+  job_id            uuid not null references public.jobs(id) on delete cascade,
+  customer_id       uuid not null references public.profiles(id),
+  provider_id       uuid not null references public.profiles(id),
+  amount            integer not null check (amount > 0),
+  payment_method    public.payment_method not null,
+  status            public.payment_status not null default 'pending',
+  voided            boolean not null default false,
+  payment_proof_url text,                                       -- migration 20260903000020: bukti bayar transfer P2P
+  created_at        timestamptz not null default now(),
+  paid_at           timestamptz,
   constraint price_agreements_unique unique (job_id, provider_id)
 );
 
@@ -1072,6 +1073,7 @@ Bucket dibuat via migration (bukan `config.toml`):
 
 - `avatars` (publik, migration `20260903000016`): foto profil `$userId/$ts_$file`. Baca bebas; tulis/hapus hanya `authenticated` (cek `bucket_id` saja).
 - `chat-attachments` (publik, migration `20260903000012` + diperketat `00000018`): lampiran chat `$jobId/$ts_$file`. Baca bebas (`anon` + `authenticated`); insert `authenticated` dengan syarat folder pertama path tidak kosong.
+- `payments` (publik, migration `20260903000020`): bukti transfer pembayaran P2P `$jobId/$ts_$file`. Baca bebas (`anon` + `authenticated`); insert `authenticated`.
 ## 10. Seed Data (dummy)
 
 ```sql
@@ -1120,6 +1122,7 @@ Bagian §1–§10 di atas mencerminkan **status akhir** setelah seluruh migratio
 | `20260903000017_service_radius_and_categories` | 7 kategori baru (total 12); `service_radius_km`; radius per-tukang |
 | `20260903000018_notifications_rls_hardening` | Trigger notifikasi ×3; `find_providers_nearby` DEFINER; revoke kolom `lat/lng`; purge 200 titik; guard nota; `locked_out` keluar chat; review/komplain wajib terpilih; storage path check |
 | `20260903000019_fix_rls_and_atomicity` | `admin_set_suspended` + `jobs_lock_applications` DEFINER; RPC `approve_payment_provider`; guard update chat; admin-read notifikasi; delete `paid` dilarang |
+| `20260903000020_feed_radius_and_payments` | Storage bucket `payments`; kolom `payment_proof_url`; RPC `get_open_jobs_for_tukang` (PostGIS radius + kategori keahlian) |
 
 ### Waiver SECURITY DEFINER di schema `public` (pengecualian atas `agents.md` §3)
 
