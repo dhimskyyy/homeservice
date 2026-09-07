@@ -7,3 +7,5 @@ build/
 .packages
 *.lock
 .DS_Store
+.vercel
+.env*
