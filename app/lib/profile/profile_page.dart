@@ -98,16 +98,43 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return Scaffold(
         appBar: AppBar(title: const Text('Profil')),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Profil tidak ditemukan'),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Masuk Lagi'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.person_off_outlined, size: 56, color: AppColors.textMuted),
+                const SizedBox(height: 12),
+                const Text(
+                  'Memuat profil pengguna...',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Jika profil belum muncul, silakan ketuk tombol di bawah untuk memuat ulang.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    final currentUser = ref.read(authProvider).user;
+                    if (currentUser != null) {
+                      ref.read(profileProvider.notifier).loadProfile(currentUser.id);
+                    } else {
+                      context.go('/login');
+                    }
+                  },
+                  label: const Text('Muat Ulang Profil'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => context.go('/login'),
+                  child: const Text('Masuk Ulang'),
+                ),
+              ],
+            ),
           ),
         ),
       );

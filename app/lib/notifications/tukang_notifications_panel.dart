@@ -26,18 +26,25 @@ class TukangNotificationsPanel extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.notifications_active_outlined,
-                        color: AppColors.secondary, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Notifikasi Pesanan Masuk',
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notifications_active_outlined,
+                          color: AppColors.secondary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Notifikasi Pesanan Masuk',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
                   children: [
                     if (notifState.unreadCount > 0)

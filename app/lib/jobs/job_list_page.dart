@@ -102,64 +102,145 @@ class JobListPage extends ConsumerWidget {
                 separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
                   final job = jobs[i];
-                  return Card(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => context.push('/jobs/${job.id}'),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    job.title,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                _buildStatusBadge(job.status),
-                              ],
+                  final canDelete = job.status == JobStatus.open || job.status == JobStatus.cancelled;
+
+                  return Dismissible(
+                    key: Key('job_dismiss_${job.id}'),
+                    direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.white, size: 24),
+                          SizedBox(width: 8),
+                          Text(
+                            'Hapus',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    confirmDismiss: (direction) async {
+                      return await showDialog<bool>(
+                        context: context,
+                        builder: (dCtx) => AlertDialog(
+                          title: const Row(
+                            children: [
+                              Icon(Icons.delete_outline, color: AppColors.error, size: 22),
+                              SizedBox(width: 8),
+                              Text('Hapus Permintaan?'),
+                            ],
+                          ),
+                          content: Text('Apakah Anda yakin ingin menghapus permintaan "${job.title}"?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(false),
+                              child: const Text('Batal'),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              job.description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.category_outlined,
-                                      size: 16,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      job.categoryName ?? 'Jasa Umum',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: AppColors.textMuted,
-                                ),
-                              ],
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                              onPressed: () => Navigator.of(dCtx).pop(true),
+                              child: const Text('Hapus'),
                             ),
                           ],
+                        ),
+                      );
+                    },
+                    onDismissed: (direction) async {
+                      try {
+                        await ref.read(jobRepositoryProvider).deleteJob(job.id);
+                        ref.invalidate(customerJobsProvider);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Permintaan jasa berhasil dihapus.'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      } catch (e) {
+                        ref.invalidate(customerJobsProvider);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Gagal menghapus permintaan: $e'), backgroundColor: AppColors.error),
+                        );
+                      }
+                    },
+                    child: Card(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => context.push('/jobs/${job.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      job.title,
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  _buildStatusBadge(job.status),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                job.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.category_outlined,
+                                        size: 16,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        job.categoryName ?? 'Jasa Umum',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      if (canDelete) ...[
+                                        const Text(
+                                          'Geser hapus',
+                                          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

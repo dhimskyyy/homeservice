@@ -112,6 +112,13 @@ serve(async (req: Request) => {
               title: title,
               body: record.body,
             },
+            android: {
+              priority: "high",
+              notification: {
+                sound: "default",
+                channel_id: "high_importance_channel",
+              },
+            },
             data: {
               job_id: record.job_id || "",
               type: record.type || "",

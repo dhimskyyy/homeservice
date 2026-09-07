@@ -12,7 +12,9 @@ class ProfileRepository {
     if (c == null) return null;
     final data = await c
         .from('profiles')
-        .select()
+        .select(
+          'id, email, full_name, phone, avatar_url, is_customer, is_tukang, is_admin, is_suspended, is_online, created_at, updated_at',
+        )
         .eq('id', userId)
         .maybeSingle();
 

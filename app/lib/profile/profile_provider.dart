@@ -90,13 +90,15 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       final registeredRole = currentUser?.userMetadata?['role'] as String?;
 
       if (profile != null) {
-        if (registeredRole == 'tukang' && profile.isTukang) {
+        if (profile.isTukang && !profile.isCustomer) {
           initialRole = UserRole.tukang;
-        } else if (profile.isTukang && !profile.isCustomer) {
-          initialRole = UserRole.tukang;
+        } else if (!profile.isTukang && profile.isCustomer) {
+          initialRole = UserRole.customer;
         } else if (profile.isTukang && profile.isCustomer) {
-          // Jika akun punya dua role, gunakan role yang tersimpan atau prefer tukang jika mendaftar tukang
+          // Jika akun punya dua role, cek registeredRole atau default ke tukang jika sedang login tukang
           initialRole = registeredRole == 'tukang' ? UserRole.tukang : state.activeRole;
+        } else if (profile.isTukang) {
+          initialRole = UserRole.tukang;
         } else {
           initialRole = UserRole.customer;
         }

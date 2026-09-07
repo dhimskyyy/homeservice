@@ -5,10 +5,14 @@ import '../auth/auth_provider.dart';
 import '../auth/role_selection_dialog.dart';
 import '../core/geo_service.dart';
 import '../core/theme.dart';
+import '../jobs/job_list_page.dart';
 import '../jobs/job_providers.dart';
 import '../jobs/tukang_active_jobs_section.dart';
 import '../jobs/tukang_job_feed.dart';
+import '../notifications/customer_notifications_modal.dart';
+import '../notifications/notifications_provider.dart';
 import '../notifications/tukang_notifications_panel.dart';
+import '../profile/profile_page.dart';
 import '../profile/profile_provider.dart';
 import '../shared/models/job_models.dart';
 import '../shared/models/user_profile.dart';
@@ -22,6 +26,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  int _customerNavIndex = 0; // 0: Home, 1: Job, 2: Profil
   int _tukangTab = 0; // 0: Pekerjaan Saya, 1: Permintaan Terbuka Sekitar
 
   @override
@@ -83,20 +88,89 @@ class _HomePageState extends ConsumerState<HomePage> {
                 );
               },
             ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Profil Saya',
-            onPressed: () => context.push('/profile'),
-          ),
+          if (activeRole == UserRole.customer)
+            Consumer(
+              builder: (ctx, cRef, _) {
+                final notifState = cRef.watch(notificationsProvider);
+                final hasUnread = notifState.unreadCount > 0;
+
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined),
+                      tooltip: 'Pemberitahuan',
+                      onPressed: () => CustomerNotificationsModal.show(context),
+                    ),
+                    if (hasUnread)
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.person_outline),
+              tooltip: 'Profil Saya',
+              onPressed: () => context.push('/profile'),
+            ),
         ],
       ),
       body: SafeArea(
         child: activeRole == UserRole.customer
-            ? _buildCustomerHome(context, ref, profile)
+            ? _buildCustomerView(context, ref, profile)
             : _buildTukangHome(context, ref, profile, profileState.tukangProfile),
       ),
-      // Tombol FAB pojok kanan bawah sudah dihapus sesuai revisi
+      bottomNavigationBar: activeRole == UserRole.customer
+          ? NavigationBar(
+              selectedIndex: _customerNavIndex,
+              onDestinationSelected: (idx) {
+                setState(() => _customerNavIndex = idx);
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.assignment_outlined),
+                  selectedIcon: Icon(Icons.assignment),
+                  label: 'Job',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Profil',
+                ),
+              ],
+            )
+          : null,
     );
+  }
+
+  Widget _buildCustomerView(BuildContext context, WidgetRef ref, UserProfile? profile) {
+    switch (_customerNavIndex) {
+      case 1:
+        return const JobListPage();
+      case 2:
+        return const ProfilePage();
+      case 0:
+      default:
+        return _buildCustomerHome(context, ref, profile);
+    }
   }
 
   Widget _buildGuestView(BuildContext context) {
@@ -755,26 +829,32 @@ class _HomePageState extends ConsumerState<HomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isOnline ? AppColors.success : Colors.grey.shade400,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isOnline ? AppColors.success : Colors.grey.shade400,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isOnline ? 'Status: Siap Menerima Order' : 'Status: Sedang Offline',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: isOnline ? AppColors.success : AppColors.textPrimary,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  isOnline ? 'Status: Siap Terima Order' : 'Status: Sedang Offline',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: isOnline ? AppColors.success : AppColors.textPrimary,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         Switch.adaptive(
                           value: isOnline,

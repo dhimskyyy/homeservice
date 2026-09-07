@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
+import '../profile/profile_provider.dart';
 import 'auth_provider.dart';
 import 'role_selection_dialog.dart';
 
@@ -33,6 +34,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             email: _emailController.text,
             password: _passwordController.text,
           );
+      final loggedInUser = ref.read(authProvider).user;
+      if (loggedInUser != null) {
+        await ref.read(profileProvider.notifier).loadProfile(loggedInUser.id);
+      }
       if (!mounted) return;
       context.go('/');
     } catch (_) {
