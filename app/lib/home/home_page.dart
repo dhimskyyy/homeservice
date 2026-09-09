@@ -9,6 +9,7 @@ import '../jobs/job_list_page.dart';
 import '../jobs/job_providers.dart';
 import '../jobs/tukang_active_jobs_section.dart';
 import '../jobs/tukang_job_feed.dart';
+import '../jobs/tukang_jobs_view.dart';
 import '../notifications/customer_notifications_modal.dart';
 import '../notifications/notifications_provider.dart';
 import '../notifications/tukang_notifications_panel.dart';
@@ -27,6 +28,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   int _customerNavIndex = 0; // 0: Home, 1: Job, 2: Profil
+  int _tukangNavIndex = 0;   // 0: Radar & Feed, 1: Pekerjaan Saya, 2: Profil
   int _tukangTab = 0; // 0: Pekerjaan Saya, 1: Permintaan Terbuka Sekitar
 
   @override
@@ -88,88 +90,102 @@ class _HomePageState extends ConsumerState<HomePage> {
                 );
               },
             ),
-          if (activeRole == UserRole.customer)
-            Consumer(
-              builder: (ctx, cRef, _) {
-                final notifState = cRef.watch(notificationsProvider);
-                final hasUnread = notifState.unreadCount > 0;
+          Consumer(
+            builder: (ctx, cRef, _) {
+              final notifState = cRef.watch(notificationsProvider);
+              final hasUnread = notifState.unreadCount > 0;
 
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_outlined),
-                      tooltip: 'Pemberitahuan',
-                      onPressed: () => CustomerNotificationsModal.show(context),
-                    ),
-                    if (hasUnread)
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            color: AppColors.error,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    tooltip: 'Pemberitahuan',
+                    onPressed: () => CustomerNotificationsModal.show(context),
+                  ),
+                  if (hasUnread)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
                         ),
                       ),
-                  ],
-                );
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.person_outline),
-              tooltip: 'Profil Saya',
-              onPressed: () => context.push('/profile'),
-            ),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       ),
       body: SafeArea(
         child: activeRole == UserRole.customer
             ? _buildCustomerView(context, ref, profile)
-            : _buildTukangHome(context, ref, profile, profileState.tukangProfile),
+            : _buildTukangView(context, ref, profile, profileState.tukangProfile),
       ),
-      bottomNavigationBar: activeRole == UserRole.customer
-          ? NavigationBar(
-              selectedIndex: _customerNavIndex,
-              onDestinationSelected: (idx) {
-                setState(() => _customerNavIndex = idx);
-              },
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.assignment_outlined),
-                  selectedIcon: Icon(Icons.assignment),
-                  label: 'Job',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: 'Profil',
-                ),
-              ],
-            )
-          : null,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: activeRole == UserRole.customer ? _customerNavIndex : _tukangNavIndex,
+        onDestinationSelected: (idx) {
+          setState(() {
+            if (activeRole == UserRole.customer) {
+              _customerNavIndex = idx;
+            } else {
+              _tukangNavIndex = idx;
+            }
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment),
+            label: 'Job',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildCustomerView(BuildContext context, WidgetRef ref, UserProfile? profile) {
     switch (_customerNavIndex) {
       case 1:
-        return const JobListPage();
+        return const JobListPage(showAppBar: false);
       case 2:
-        return const ProfilePage();
+        return const ProfilePage(showAppBar: false);
       case 0:
       default:
         return _buildCustomerHome(context, ref, profile);
+    }
+  }
+
+  Widget _buildTukangView(
+    BuildContext context,
+    WidgetRef ref,
+    UserProfile? profile,
+    TukangProfile? tukang,
+  ) {
+    switch (_tukangNavIndex) {
+      case 1:
+        return const TukangJobsView(showAppBar: false);
+      case 2:
+        return const ProfilePage(showAppBar: false);
+      case 0:
+      default:
+        return _buildTukangHome(context, ref, profile, tukang);
     }
   }
 

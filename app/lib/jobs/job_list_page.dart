@@ -6,7 +6,9 @@ import '../shared/models/job_models.dart';
 import 'job_providers.dart';
 
 class JobListPage extends ConsumerWidget {
-  const JobListPage({super.key});
+  final bool showAppBar;
+
+  const JobListPage({super.key, this.showAppBar = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -14,9 +16,11 @@ class JobListPage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daftar Permintaan Saya'),
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              title: const Text('Daftar Permintaan Saya'),
+            )
+          : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {

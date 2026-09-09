@@ -12,7 +12,9 @@ import 'profile_provider.dart';
 import 'service_radius_editor.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
-  const ProfilePage({super.key});
+  final bool showAppBar;
+
+  const ProfilePage({super.key, this.showAppBar = true});
 
   @override
   ConsumerState<ProfilePage> createState() => _ProfilePageState();
@@ -178,9 +180,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil Saya'),
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: const Text('Profil Saya'),
+            )
+          : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
