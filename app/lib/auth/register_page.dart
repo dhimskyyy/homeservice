@@ -483,13 +483,23 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             : Text(_isTukang ? 'Daftar Menjadi Tukang' : 'Daftar Customer'),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Text('Sudah punya akun?'),
-                          TextButton(
-                            onPressed: () => context.go('/login'),
-                            child: const Text('Masuk'),
+                          const Text('Sudah punya akun? '),
+                          GestureDetector(
+                            onTap: () => context.go('/login'),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                              child: Text(
+                                'Masuk',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

@@ -12,7 +12,6 @@ import '../jobs/tukang_job_feed.dart';
 import '../jobs/tukang_jobs_view.dart';
 import '../notifications/customer_notifications_modal.dart';
 import '../notifications/notifications_provider.dart';
-import '../notifications/tukang_notifications_panel.dart';
 import '../profile/profile_page.dart';
 import '../profile/profile_provider.dart';
 import '../shared/models/job_models.dart';
@@ -525,7 +524,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     crossAxisCount: 3,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 0.9,
+                    childAspectRatio: 0.80,
                   ),
                   itemCount: displayItems.length,
                   itemBuilder: (ctx, i) {
@@ -544,12 +543,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                           borderRadius: BorderRadius.circular(14),
                           onTap: () => context.push('/all-categories'),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: AppColors.primary.withValues(alpha: 0.12),
                                     shape: BoxShape.circle,
@@ -560,7 +559,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                     size: 24,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 Text(
                                   '+$otherCount Lainnya',
                                   textAlign: TextAlign.center,
@@ -592,12 +591,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                           context.push('/create-job?categoryId=${cat.id}');
                         },
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: AppColors.primary.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
@@ -605,17 +604,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 child: Icon(
                                   _getCategoryIcon(cat.slug),
                                   color: AppColors.primary,
-                                  size: 28,
+                                  size: 26,
                                 ),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 6),
                               Text(
                                 cat.name,
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -933,22 +932,25 @@ class _HomePageState extends ConsumerState<HomePage> {
                       side: const BorderSide(color: AppColors.border),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 10.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 22),
+                          const Icon(Icons.star, color: Colors.amber, size: 20),
                           const SizedBox(height: 4),
-                          Text(
-                            '${tukang?.ratingAvg.toStringAsFixed(1) ?? "0.0"} ★',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${tukang?.ratingAvg.toStringAsFixed(1) ?? "0.0"} ★',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          const Text('Rating', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          const Text('Rating', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Card(
                     elevation: 0,
@@ -957,22 +959,25 @@ class _HomePageState extends ConsumerState<HomePage> {
                       side: const BorderSide(color: AppColors.border),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 10.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.task_alt, color: AppColors.primary, size: 22),
+                          const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
                           const SizedBox(height: 4),
-                          Text(
-                            '${tukang?.jobCount ?? 0}',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${tukang?.jobCount ?? 0}',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          const Text('Selesai', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          const Text('Selesai', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Card(
                     elevation: 0,
@@ -981,16 +986,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                       side: const BorderSide(color: AppColors.border),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 10.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.confirmation_num_outlined, color: AppColors.secondary, size: 22),
+                          const Icon(Icons.confirmation_num_outlined, color: AppColors.secondary, size: 20),
                           const SizedBox(height: 4),
-                          Text(
-                            '$activeTicketCount',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '$activeTicketCount',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          const Text('Job Aktif', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          const Text('Job Aktif', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -1001,12 +1009,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
             const SizedBox(height: 14),
 
-            // 4. NOTIFIKASI PESANAN MASUK (Realtime)
-            const TukangNotificationsPanel(),
-
-            const SizedBox(height: 14),
-
-            // 5. BANNER TIPS OPERASIONAL TUKANG
+            // 4. BANNER TIPS OPERASIONAL TUKANG
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

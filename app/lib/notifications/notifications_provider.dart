@@ -122,6 +122,42 @@ class NotificationsNotifier extends StateNotifier<NotificationsState> {
         .subscribe();
   }
 
+  Future<void> markAsRead(String notifId) async {
+    final user = _ref.read(authProvider).user;
+    final c = _client;
+    if (user == null || c == null) return;
+
+    try {
+      await c
+          .from('app_notifications')
+          .update({'read': true})
+          .eq('id', notifId)
+          .eq('user_id', user.id);
+
+      state = state.copyWith(
+        items: state.items.map((n) => n.id == notifId ? n.copyWith(read: true) : n).toList(),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> deleteNotification(String notifId) async {
+    final user = _ref.read(authProvider).user;
+    final c = _client;
+    if (user == null || c == null) return;
+
+    try {
+      await c
+          .from('app_notifications')
+          .delete()
+          .eq('id', notifId)
+          .eq('user_id', user.id);
+
+      state = state.copyWith(
+        items: state.items.where((n) => n.id != notifId).toList(),
+      );
+    } catch (_) {}
+  }
+
   Future<void> markAllRead() async {
     final user = _ref.read(authProvider).user;
     final c = _client;

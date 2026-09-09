@@ -173,13 +173,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             : const Text('Masuk'),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Text('Belum punya akun?'),
-                          TextButton(
-                            onPressed: () => RoleSelectionDialog.show(context),
-                            child: const Text('Daftar Sekarang'),
+                          const Text('Belum punya akun? '),
+                          GestureDetector(
+                            onTap: () => RoleSelectionDialog.show(context),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                              child: Text(
+                                'Daftar Sekarang',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

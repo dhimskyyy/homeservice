@@ -114,69 +114,95 @@ class TukangNotificationsPanel extends ConsumerWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (ctx, i) {
                   final notif = notifState.items[i];
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () {
-                      if (!notif.read) {
-                        ref.read(notificationsProvider.notifier).markAllRead();
-                      }
-                      if (notif.jobId != null) {
-                        context.push('/jobs/${notif.jobId}');
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
+                  return Dismissible(
+                    key: Key('tukang_notif_dismiss_${notif.id}'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: notif.read
-                            ? AppColors.surfaceVariant.withValues(alpha: 0.4)
-                            : AppColors.primary.withValues(alpha: 0.06),
+                        color: AppColors.error,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: notif.read
-                              ? Colors.transparent
-                              : AppColors.primary.withValues(alpha: 0.2),
-                        ),
                       ),
-                      child: Row(
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Icon(
-                            _getNotifIcon(notif.type),
-                            color: _getNotifColor(notif.type),
-                            size: 22,
+                          Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                          SizedBox(width: 4),
+                          Text(
+                            'Hapus',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  notif.body,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: notif.read ? FontWeight.w500 : FontWeight.bold,
-                                    color: notif.read
-                                        ? AppColors.textSecondary
-                                        : AppColors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _formatTime(notif.createdAt),
-                                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
-                                ),
-                              ],
+                        ],
+                      ),
+                    ),
+                    onDismissed: (_) {
+                      ref.read(notificationsProvider.notifier).deleteNotification(notif.id);
+                    },
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () {
+                        if (!notif.read) {
+                          ref.read(notificationsProvider.notifier).markAsRead(notif.id);
+                        }
+                        if (notif.jobId != null) {
+                          context.push('/jobs/${notif.jobId}');
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: notif.read
+                              ? AppColors.surfaceVariant.withValues(alpha: 0.4)
+                              : AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: notif.read
+                                ? Colors.transparent
+                                : AppColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getNotifIcon(notif.type),
+                              color: _getNotifColor(notif.type),
+                              size: 22,
                             ),
-                          ),
-                          if (!notif.read)
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    notif.body,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: notif.read ? FontWeight.w500 : FontWeight.bold,
+                                      color: notif.read
+                                          ? AppColors.textSecondary
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _formatTime(notif.createdAt),
+                                    style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                  ),
+                                ],
                               ),
                             ),
-                        ],
+                            if (!notif.read)
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   );
